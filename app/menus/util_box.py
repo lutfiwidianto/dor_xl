@@ -78,6 +78,7 @@ def get_terminal_width(min_width: int = 40, fallback: int = 50, padding: int = 2
 # =========================
 # Text wrapping helpers
 # =========================
+
 def wrap_lines(
     text: Any,
     width: int,
@@ -87,21 +88,74 @@ def wrap_lines(
     drop_empty: bool = False,
 ) -> List[str]:
     """
-    Wrap teks menjadi list baris sesuai width.
+    Wrap teks berdasarkan DISPLAY WIDTH (bukan len()),
+    aman untuk ANSI color codes, dan lebih rapih di Termux.
     """
     s = str(text)
     if drop_empty and not s.strip():
         return []
-    # NOTE: textwrap tidak aware ANSI; idealnya text yang berisi ANSI jangan panjang-panjang.
-    wrapped = textwrap.wrap(
-        s,
-        width=width,
-        initial_indent=indent_first,
-        subsequent_indent=indent_next,
-        break_long_words=True,
-        break_on_hyphens=False,
-    ) or [""]
-    return wrapped
+
+    # Tokenize: ANSI escapes atau karakter biasa
+    tokens = re.findall(r"\x1b\[[0-9;]*m|.", s)
+
+    def _ch_w(ch: str) -> int:
+        # ANSI tidak punya lebar tampilan
+        if ANSI_RE.fullmatch(ch):
+            return 0
+        # Lebar 2 untuk wide char (termasuk banyak emoji)
+        return 2 if unicodedata.east_asian_width(ch) in ("F", "W") else 1
+
+    lines: List[str] = []
+    cur: List[str] = []
+    cur_w = 0
+
+    def flush():
+        nonlocal cur, cur_w
+        out = "".join(cur).rstrip()
+        lines.append(out)
+        cur = []
+        cur_w = 0
+
+    # helper: add string (indent) tanpa menghitung ANSI
+    def add_str(raw: str):
+        nonlocal cur, cur_w
+        for t in re.findall(r"\x1b\[[0-9;]*m|.", raw):
+            cur.append(t)
+            cur_w += _ch_w(t)
+
+    # indent awal
+    if indent_first:
+        add_str(indent_first)
+
+    i = 0
+    while i < len(tokens):
+        t = tokens[i]
+        w = _ch_w(t)
+
+        # kalau char normal dan akan overflow, pindah baris
+        if w > 0 and cur_w + w > width:
+            flush()
+            if indent_next:
+                add_str(indent_next)
+
+            # skip spasi awal baris
+            if not ANSI_RE.fullmatch(t) and t == " ":
+                i += 1
+                continue
+
+        cur.append(t)
+        cur_w += w
+        i += 1
+
+    # flush terakhir
+    if cur:
+        flush()
+
+    # Kalau hasil wrap kosong
+    if not lines:
+        return [""]
+
+    return lines
 
 
 def kv_lines(
