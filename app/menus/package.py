@@ -238,12 +238,18 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         print(f"{C}├{'─' * (width - 2)}┤{RESET}")
 
         options_grid = [
-            f"{C}[{W}1{C}] {W}Pulsa{RESET}        {C}[{W}2{C}] {W}E-Wallet{RESET}     {C}[{W}3{C}] {W}QRIS{RESET}",
-            f"{C}[{W}4{C}] {W}Pulsa + Decoy{RESET} {C}[{W}5{C}] {W}Decoy V2{RESET}    {C}[{W}6{C}] {W}QRIS + Decoy{RESET}",
-            f"{C}[{W}7{C}] {W}QRIS Decoy V2{RESET} {C}[{W}8{C}] {W}Beli N kali{RESET}",
+            f"{C}[{W}1{C}] {W}Pulsa{RESET}",
+            f"{C}[{W}2{C}] {W}E-Wallet{RESET}",
+            f"{C}[{W}3{C}] {W}QRIS{RESET}",
+            f"{C}[{W}4{C}] {W}Pulsa + Decoy{RESET}",
+            f"{C}[{W}5{C}] {W}Decoy V2{RESET}",
+            f"{C}[{W}6{C}] {W}QRIS + Decoy{RESET}",
+            f"{C}[{W}7{C}] {W}QRIS Decoy V2{RESET}",
+            f"{C}[{W}8{C}] {W}Beli N kali{RESET}",
         ]
         for line in options_grid:
             print(f"{C}│{RESET} {line.ljust(width - 4)} {C}│{RESET}")
+
 
         if payment_for == "REDEEM_VOUCHER":
             voucher_options = [
