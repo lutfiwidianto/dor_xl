@@ -523,7 +523,11 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             pause()
 
 
-def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, migration_type: str | None = None):
+def get_packages_by_family(
+    family_code: str,
+    is_enterprise: bool | None = None,
+    migration_type: str | None = None
+):
     api_key = AuthInstance.api_key
     tokens = AuthInstance.get_active_tokens()
     if not tokens:
@@ -538,6 +542,18 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
         print_card(f"{R}Gagal memuat data keluarga paket!{RESET}", "❌ ERROR", width=width, color=R)
         pause()
         return None
+
+    # helper: potong teks berdasarkan display width (bukan len)
+    def truncate_to_width(s: str, maxw: int) -> str:
+        s = str(s)
+        if display_width(s) <= maxw:
+            return s
+        out = ""
+        for ch in s:
+            if display_width(out + ch + "...") > maxw:
+                break
+            out += ch
+        return out + "..."
 
     family_name = data["package_family"]["name"]
     family_type = data["package_family"]["package_family_type"]
@@ -566,7 +582,8 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             variant_name = variant["name"]
             variant_code = variant["package_variant_code"]
 
-            content_width = width - 6
+            # lebar isi card (bukan width - 8)
+            content_width = width - 4
 
             variant_content = [
                 f"{B}{Y}Variant {variant_idx}: {variant_name}{RESET}",
@@ -574,9 +591,8 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
                 f"{D}{'-' * content_width}{RESET}",
             ]
 
-
             options_content = []
-            for option in variant["package_options"]:
+            for option in variant.get("package_options", []):
                 option_name = option["name"]
                 option_price = option["price"]
                 option_code = option["package_option_code"]
@@ -588,13 +604,25 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
                         "option_name": option_name,
                         "price": option_price,
                         "code": option_code,
-                        "option_order": option["order"],
+                        "option_order": option.get("order"),
                     }
                 )
 
                 price_display = f"{price_currency} {option_price:,}"
-                option_display = f"{C}[{W}{option_number:2}{C}]{RESET} {W}{option_name:<30}{RESET} {G}{price_display:>15}{RESET}"
+
+                # ===== bikin 1 baris selalu (anti wrap) =====
+                prefix = f"{C}[{W}{option_number:2}{C}]{RESET} "
+                right = f"{G}{price_display}{RESET}"
+                gap = "  "
+
+                max_name_w = content_width - display_width(prefix) - display_width(gap) - display_width(right)
+                max_name_w = max(10, max_name_w)  # minimal biar tidak kosong
+
+                name_fit = truncate_to_width(option_name, max_name_w)
+
+                option_display = f"{prefix}{W}{name_fit}{RESET}{gap}{right}"
                 options_content.append(option_display)
+
                 option_number += 1
 
             print_card(variant_content + options_content, f"🎯 VARIANT {variant_idx}", width=width, color=M)
@@ -630,6 +658,8 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             is_enterprise,
             option_order=selected_pkg["option_order"],
         )
+
+
 def fetch_my_packages():
     width = get_terminal_width()
 
