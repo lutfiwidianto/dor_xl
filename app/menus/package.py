@@ -723,7 +723,7 @@ def fetch_my_packages():
                     usage = str(b.get("usage", ""))
 
                     BREAK = "\u200b"      # Zero Width Space
-                    prefix = f"{W}├{BREAK}─ {RESET}"
+                    prefix = f"{W}|- {RESET}"
                     sep = f"{W}: {RESET}"
                     right = f"{G}{usage}{RESET}"
 
