@@ -569,7 +569,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             variant_content = [
                 f"{B}{Y}Variant {variant_idx}: {variant_name}{RESET}",
                 f"{D}Kode: {variant_code}{RESET}",
-                f"{W}{H * (width - 6)}{RESET}",
+                f"{W}{H * (width - 4)}{RESET}",
             ]
 
             options_content = []
