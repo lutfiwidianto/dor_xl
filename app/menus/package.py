@@ -723,6 +723,8 @@ def fetch_my_packages():
                 n = len(benefits)
 
                 # benefits tree rapi
+                RIGHT_OFFSET = 2  # ⬅️ ini kuncinya
+
                 for idx, b in enumerate(benefits):
                     name = str(b.get("name", ""))
                     usage = str(b.get("usage", ""))
@@ -735,19 +737,30 @@ def fetch_my_packages():
                     sep = f"{W}: {RESET}"
                     right = f"{G}{usage}{RESET}"
 
-                    fixed = display_width(prefix) + display_width(sep) + display_width(right)
+                    fixed = (
+                        display_width(prefix)
+                        + display_width(sep)
+                        + display_width(right)
+                        + RIGHT_OFFSET        # ⬅️ dorong ke kanan
+                    )
+
                     max_name_w = max(6, content_width - fixed - 1)
                     name = truncate_to_width(name, max_name_w)
 
                     left = f"{D}{name}{RESET}"
 
                     filler = content_width - (
-                        display_width(prefix) + display_width(left) + display_width(sep) + display_width(right)
+                        display_width(prefix)
+                        + display_width(left)
+                        + display_width(sep)
+                        + display_width(right)
+                        + RIGHT_OFFSET        # ⬅️ dorong ke kanan
                     )
                     filler = max(1, filler)
 
-                    card_content.append(f"{prefix}{left}{' ' * filler}{sep}{right}")
-
+                    card_content.append(
+                        f"{prefix}{left}{' ' * filler}{sep}{right}"
+                    )
                 # ID: juga pakai └─ (sesuai request kamu)
                 id_prefix = f"{W}└{BREAK}─ {RESET}"
                 id_text = f"{M}ID: {pkg['q_code'][:12]}...{RESET}"
