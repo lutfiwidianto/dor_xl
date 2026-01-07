@@ -58,10 +58,6 @@ def strip_ansi(s: str) -> str:
 # Width calculation (FIX emoji width)
 # =========================
 def _char_width_fallback(ch: str) -> int:
-    """
-    Fallback lebar karakter kalau wcwidth tidak tersedia.
-    Lebih bagus dari east_asian_width murni, karena banyak emoji butuh width=2.
-    """
     if not ch:
         return 0
 
@@ -83,7 +79,7 @@ def _char_width_fallback(ch: str) -> int:
     if unicodedata.combining(ch):
         return 0
 
-    # Banyak emoji/simbol ada di kategori "So" (Symbol, other) dan tampil 2 kolom di terminal
+    # Banyak emoji/simbol ada di kategori "So" dan tampil 2 kolom di terminal
     cat = unicodedata.category(ch)
     if cat == "So":
         return 2
@@ -93,12 +89,11 @@ def _char_width_fallback(ch: str) -> int:
     if eaw in ("F", "W"):
         return 2
 
-    # Beberapa blok emoji umum (heuristik)
-    # Emoticons, Misc Symbols, Dingbats, Transport, Supplemental Symbols, dll
+    # Heuristik blok emoji umum
     if (
-        0x1F300 <= code <= 0x1FAFF  # mayoritas emoji modern
-        or 0x2600 <= code <= 0x27BF  # misc symbols + dingbats
-        or 0x2300 <= code <= 0x23FF  # misc technical (sebagian tampil 2)
+        0x1F300 <= code <= 0x1FAFF
+        or 0x2600 <= code <= 0x27BF
+        or 0x2300 <= code <= 0x23FF
     ):
         return 2
 
@@ -106,12 +101,8 @@ def _char_width_fallback(ch: str) -> int:
 
 
 def char_width(ch: str) -> int:
-    """
-    Lebar 1 karakter untuk tampilan terminal (ANSI sudah di-handle di level token).
-    """
     if _wcwidth is not None:
         w = _wcwidth(ch)
-        # wcwidth mengembalikan -1 untuk karakter "non printable"
         return 0 if w < 0 else w
     return _char_width_fallback(ch)
 
@@ -140,20 +131,34 @@ def pad_right(text: Any, width: int) -> str:
     return f"{s}{' ' * pad}"
 
 
+def center_display(text: Any, width: int) -> str:
+    """
+    Center string berdasarkan lebar tampilan terminal (bukan len()).
+    Ini yang bikin header emoji tetap lurus.
+    """
+    s = str(text)
+    w = display_width(s)
+    if w >= width:
+        return s
+    pad_total = width - w
+    left = pad_total // 2
+    right = pad_total - left
+    return (" " * left) + s + (" " * right)
+
+
 def get_terminal_width(min_width: int = 40, fallback: int = 50, padding: int = 2) -> int:
     """
     Ambil lebar terminal. Default dikurangi padding supaya tidak wrap di pinggir.
     """
     try:
         columns, _ = os.get_terminal_size()
-        w = max(columns - padding, min_width)
-        return w
+        return max(columns - padding, min_width)
     except Exception:
         return max(fallback, min_width)
 
 
 # =========================
-# Wrapping helpers (FIX: width-aware)
+# Wrapping helpers (width-aware)
 # =========================
 def wrap_lines(
     text: Any,
@@ -171,7 +176,6 @@ def wrap_lines(
     if drop_empty and not s.strip():
         return []
 
-    # Tokenize: ANSI escapes atau karakter tunggal
     tokens = re.findall(r"\x1b\[[0-9;]*m|.", s)
 
     def _tok_w(tok: str) -> int:
@@ -203,13 +207,12 @@ def wrap_lines(
         t = tokens[i]
         w = _tok_w(t)
 
-        # pindah baris kalau overflow
         if w > 0 and cur_w + w > width:
             flush()
             if indent_next:
                 add_str(indent_next)
 
-            # skip spasi awal baris (biar rapi)
+            # skip spasi awal baris
             if not ANSI_RE.fullmatch(t) and t == " ":
                 i += 1
                 continue
@@ -225,9 +228,6 @@ def wrap_lines(
 
 
 def kv_lines(kv: Dict[Any, Any], width: int, *, sep: str = ": ") -> List[str]:
-    """
-    Ubah dict key->value menjadi baris-baris yang wrap.
-    """
     out: List[str] = []
     for k, v in kv.items():
         out.extend(wrap_lines(f"{k}{sep}{v}", width))
@@ -242,7 +242,7 @@ def print_header(title: str, width: Optional[int] = None, color: str = C) -> Non
         width = get_terminal_width()
     inner = width - 2
     print(f"{color}{TL}{H * inner}{TR}{RESET}")
-    print(f"{color}{V}{RESET}{W}{B}{pad_right(title.center(inner), inner)}{RESET}{color}{V}{RESET}")
+    print(f"{color}{V}{RESET}{W}{B}{center_display(title, inner)}{RESET}{color}{V}{RESET}")
     print(f"{color}{BL}{H * inner}{BR}{RESET}")
 
 
@@ -261,7 +261,7 @@ def print_card(
 
     if title:
         print(f"\n{color}{TL}{H * inner}{TR}{RESET}")
-        print(f"{color}{V}{RESET}{W}{B}{pad_right(title.center(inner), inner)}{RESET}{color}{V}{RESET}")
+        print(f"{color}{V}{RESET}{W}{B}{center_display(title, inner)}{RESET}{color}{V}{RESET}")
         print(f"{color}{LM}{H * inner}{RM}{RESET}")
     else:
         print(f"\n{color}{TL}{H * inner}{TR}{RESET}")
@@ -348,6 +348,7 @@ def print_paged(
 
         start = end
         page += 1
+
         if start < total:
             input(f"{W}{pause_text}{RESET}")
 

@@ -709,7 +709,7 @@ def fetch_my_packages():
 
         nav_options = [
             f"{C}[{W}No{C}]{RESET} {W}Lihat detail paket{RESET}",
-            f"{C}[{R}No{C}]{RESET} {W}Unsubscribe paket{RESET}",
+            f"{C}[{R}No{C}]{RESET} {W}Del / Unsubscribe paket{RESET}",
             f"{C}[{R}00{C}]{RESET} {W}Kembali{RESET}",
         ]
         print_menu_box("📋 MENU NAVIGASI", nav_options, width=width, color=C)
