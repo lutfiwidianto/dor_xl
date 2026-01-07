@@ -643,6 +643,8 @@ def fetch_my_packages():
             out += ch
         return out + "..."
 
+    BREAK = "\u200b"  # Zero Width Space (pemutus line-joining di Termux)
+
     while True:
         api_key = AuthInstance.api_key
         tokens = AuthInstance.get_active_tokens()
@@ -655,7 +657,6 @@ def fetch_my_packages():
         print(f"\n{W}🔄{RESET} {C}Sedang sinkronisasi data paket...{RESET}")
         print(f"{W}{H * (width // 2)}{RESET}")
 
-        # ✅ lang Indonesia
         res = send_api_request(
             api_key,
             "api/v8/packages/quota-details",
@@ -710,25 +711,32 @@ def fetch_my_packages():
                 # lebar area isi card (tanpa border + spasi kiri kanan)
                 content_width = width - 4
 
-                # rapihin nama paket juga biar gak over
+                # rapihin nama paket biar gak over
                 pkg_name = truncate_to_width(pkg["name"], max(10, content_width - 6))
 
                 card_content = [
                     f"{B}{Y}{pkg['num']}. {pkg_name}{RESET}",
-                    f"{D}{'-' * content_width}{RESET}",
+                    f"{D}{'-' * content_width}{RESET}",  # optional (boleh dihapus kalau gak mau garis)
                 ]
-                # Format: "├ <name> ..... : <usage>"
-                for b in pkg["benefits"]:
+
+                benefits = pkg.get("benefits", [])
+                n = len(benefits)
+
+                # benefits tree rapi
+                for idx, b in enumerate(benefits):
                     name = str(b.get("name", ""))
                     usage = str(b.get("usage", ""))
 
-                    BREAK = "\u200b"      # Zero Width Space
-                    prefix = f"{W}|- {RESET}"
+                    is_last = (idx == n - 1)
+
+                    # tree: ├─ untuk 1..n-1, └─ untuk terakhir
+                    branch = "└" if is_last else "├"
+                    prefix = f"{W}{branch}{BREAK}─ {RESET}"
                     sep = f"{W}: {RESET}"
                     right = f"{G}{usage}{RESET}"
 
                     fixed = display_width(prefix) + display_width(sep) + display_width(right)
-                    max_name_w = max(6, content_width - fixed - 1)  # -1 biar aman
+                    max_name_w = max(6, content_width - fixed - 1)
                     name = truncate_to_width(name, max_name_w)
 
                     left = f"{D}{name}{RESET}"
@@ -740,7 +748,11 @@ def fetch_my_packages():
 
                     card_content.append(f"{prefix}{left}{' ' * filler}{sep}{right}")
 
-                card_content.append(f"{W}╰ {M}ID: {pkg['q_code'][:12]}...{RESET}")
+                # ID: juga pakai └─ (sesuai request kamu)
+                id_prefix = f"{W}└{BREAK}─ {RESET}"
+                id_text = f"{M}ID: {pkg['q_code'][:12]}...{RESET}"
+                card_content.append(f"{id_prefix}{id_text}")
+
                 print_card(card_content, f"📱 PAKET {pkg['num']}", width=width, color=C)
 
         nav_options = [
@@ -778,4 +790,3 @@ def fetch_my_packages():
         else:
             print_card(f"{R}Pilihan tidak valid!{RESET}", "⚠ PERINGATAN", width=width // 2, color=R)
             pause()
-
