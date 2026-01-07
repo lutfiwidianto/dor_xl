@@ -715,8 +715,8 @@ def fetch_my_packages():
 
                 card_content = [
                     f"{B}{Y}{pkg['num']}. {pkg_name}{RESET}",
+                    f"{D}{'-' * content_width}{RESET}",
                 ]
-
                 # Format: "├ <name> ..... : <usage>"
                 for b in pkg["benefits"]:
                     name = str(b.get("name", ""))
