@@ -58,9 +58,9 @@ def get_terminal_width():
 def print_header(title, width, color=C):
     """Print elegant header"""
     inner = width - 2
-    print(f"{color}?{'?' * inner}?{RESET}")
+    print(f"{color}?{'|' * inner}?{RESET}")
     print(f"{color}?{RESET}{W}{B}{pad_right(title.center(inner), inner)}{RESET}{color}?{RESET}")
-    print(f"{color}?{'?' * inner}?{RESET}")
+    print(f"{color}?{'|' * inner}?{RESET}")
 
 def print_card(content, title=None, color=G, width=None):
     """Print content in a card format"""
@@ -71,11 +71,11 @@ def print_card(content, title=None, color=G, width=None):
     content_width = width - 4
 
     if title:
-        print(f"\n{color}?{'?' * inner}?{RESET}")
+        print(f"\n{color}?{'|' * inner}?{RESET}")
         print(f"{color}?{RESET}{W}{B}{pad_right(title.center(inner), inner)}{RESET}{color}?{RESET}")
-        print(f"{color}?{'?' * inner}?{RESET}")
+        print(f"{color}?{'|' * inner}?{RESET}")
     else:
-        print(f"\n{color}?{'?' * inner}?{RESET}")
+        print(f"\n{color}?{'|' * inner}?{RESET}")
 
     if isinstance(content, list):
         for line in content:
@@ -94,7 +94,7 @@ def print_card(content, title=None, color=G, width=None):
         for piece in wrapped:
             print(f"{color}?{RESET} {pad_right(piece, content_width)} {color}?{RESET}")
 
-    print(f"{color}?{'?' * inner}?{RESET}")
+    print(f"{color}?{'|' * inner}?{RESET}")
 
 
 def format_price(price):
