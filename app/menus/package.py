@@ -32,7 +32,7 @@ from app.menus.util_box import (
     wrap_bullets,
     input_box,
     get_terminal_width,
-    pad_right,
+    pad_right, print_paged, wrap_bullets, display_width,
     # warna & karakter border jika masih mau dipakai manual
     C, G, Y, R, M, W, B, D, RESET,
     TL, TR, BL, BR, H, V, LM, RM,
@@ -628,9 +628,20 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             option_order=selected_pkg["option_order"],
         )
 
-
 def fetch_my_packages():
     width = get_terminal_width()
+
+    # helper: potong teks berdasarkan display width (bukan len)
+    def truncate_to_width(s: str, maxw: int) -> str:
+        s = str(s)
+        if display_width(s) <= maxw:
+            return s
+        out = ""
+        for ch in s:
+            if display_width(out + ch + "...") > maxw:
+                break
+            out += ch
+        return out + "..."
 
     while True:
         api_key = AuthInstance.api_key
@@ -665,7 +676,6 @@ def fetch_my_packages():
             benefits_list = []
             for b in quota.get("benefits", []):
                 name = b.get("name", "")
-                short_name = (name[:15] + "..") if len(name) > 17 else name
 
                 rem = b.get("remaining", 0)
                 tot = b.get("total", 0)
@@ -678,13 +688,13 @@ def fetch_my_packages():
                 else:
                     usage = f"{rem}/{tot}"
 
-                benefits_list.append({"name": short_name, "usage": usage})
+                benefits_list.append({"name": name, "usage": usage})
 
             package_buffer.append(
                 {
                     "num": i,
-                    "name": quota["name"][: width - 10],
-                    "q_code": quota["quota_code"],
+                    "name": quota.get("name", ""),
+                    "q_code": quota.get("quota_code", ""),
                     "benefits": benefits_list,
                     "raw": quota,
                 }
@@ -697,24 +707,50 @@ def fetch_my_packages():
             print_card(f"{Y}Tidak ada paket aktif.{RESET}", "ℹ INFO", width=width, color=Y)
         else:
             for pkg in package_buffer:
+                # lebar area isi card (tanpa border + spasi kiri kanan)
+                content_width = width - 4
+
+                # rapihin nama paket juga biar gak over
+                pkg_name = truncate_to_width(pkg["name"], max(10, content_width - 6))
+
                 card_content = [
-                    f"{B}{Y}{pkg['num']}. {pkg['name']}{RESET}",
-                    f"{D}{H * (width - 6)}{RESET}",
+                    f"{B}{Y}{pkg['num']}. {pkg_name}{RESET}",
+                    f"{D}{H * (content_width - 2)}{RESET}",
                 ]
+
+                # Format: "├ <name> ..... : <usage>"
                 for b in pkg["benefits"]:
-                    space_filler = (width - len(b["name"]) - len(b["usage"]) - 10) * " "
-                    card_content.append(f"{W}├ {D}{b['name']}{space_filler}{W}: {G}{b['usage']}{RESET}")
+                    name = str(b.get("name", ""))
+                    usage = str(b.get("usage", ""))
+
+                    prefix = f"{W}├ {RESET}"
+                    sep = f"{W}: {RESET}"
+                    right = f"{G}{usage}{RESET}"
+
+                    fixed = display_width(prefix) + display_width(sep) + display_width(right)
+                    max_name_w = max(6, content_width - fixed - 1)  # -1 biar aman
+                    name = truncate_to_width(name, max_name_w)
+
+                    left = f"{D}{name}{RESET}"
+
+                    filler = content_width - (
+                        display_width(prefix) + display_width(left) + display_width(sep) + display_width(right)
+                    )
+                    filler = max(1, filler)
+
+                    card_content.append(f"{prefix}{left}{' ' * filler}{sep}{right}")
+
                 card_content.append(f"{W}╰ {M}ID: {pkg['q_code'][:12]}...{RESET}")
                 print_card(card_content, f"📱 PAKET {pkg['num']}", width=width, color=C)
 
         nav_options = [
             f"{C}[{W}No{C}]{RESET} {W}Lihat detail paket{RESET}",
-            f"{C}[{R}No{C}]{RESET} {W}Del / Unsubscribe paket{RESET}",
+            f"{C}[{R}del No{C}]{RESET} {W}Unsubscribe paket{RESET}",
             f"{C}[{R}00{C}]{RESET} {W}Kembali{RESET}",
         ]
         print_menu_box("📋 MENU NAVIGASI", nav_options, width=width, color=C)
 
-        choice = input_box("Pilihan:", width=width)
+        choice = input_box("Pilihan:", width=width).strip().lower()
 
         if choice == "00":
             return None
@@ -742,3 +778,4 @@ def fetch_my_packages():
         else:
             print_card(f"{R}Pilihan tidak valid!{RESET}", "⚠ PERINGATAN", width=width // 2, color=R)
             pause()
+
