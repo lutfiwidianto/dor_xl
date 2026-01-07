@@ -2,6 +2,8 @@ import json
 import sys
 import os
 import textwrap
+import re
+import unicodedata
 from datetime import datetime
 
 import requests
@@ -33,6 +35,18 @@ B = "\033[1m"   # Bold
 D = "\033[90m"  # Dark Gray
 RESET = "\033[0m"  # Reset
 
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+def display_width(text):
+    stripped = ANSI_RE.sub("", str(text))
+    width = 0
+    for ch in stripped:
+        width += 2 if unicodedata.east_asian_width(ch) in ("F", "W") else 1
+    return width
+
+def pad_right(text, width):
+    return f"{text}{' ' * max(0, width - display_width(text))}"
+
 def get_terminal_width():
     """Get terminal width with fallback"""
     try:
@@ -43,35 +57,47 @@ def get_terminal_width():
 
 def print_header(title, width, color=C):
     """Print elegant header"""
-    print(f"{color}┏{'━' * (width - 2)}┓{RESET}")
-    print(f"{color}┃{W}{B}{title.center(width - 2)}{color}┃{RESET}")
-    print(f"{color}┗{'━' * (width - 2)}┛{RESET}")
+    inner = width - 2
+    print(f"{color}?{'?' * inner}?{RESET}")
+    print(f"{color}?{RESET}{W}{B}{pad_right(title.center(inner), inner)}{RESET}{color}?{RESET}")
+    print(f"{color}?{'?' * inner}?{RESET}")
+
 
 def print_card(content, title=None, color=G, width=None):
     """Print content in a card format"""
     if width is None:
         width = get_terminal_width()
 
+    inner = width - 2
+    content_width = width - 4
+
     if title:
-        print(f"\n{color}┌{'─' * (width - 2)}┐{RESET}")
-        print(f"{color}│{W}{B}{title.center(width - 2)}{color}│{RESET}")
-        print(f"{color}├{'─' * (width - 2)}┤{RESET}")
+        print(f"
+{color}?{'?' * inner}?{RESET}")
+        print(f"{color}?{RESET}{W}{B}{pad_right(title.center(inner), inner)}{RESET}{color}?{RESET}")
+        print(f"{color}?{'?' * inner}?{RESET}")
     else:
-        print(f"\n{color}┌{'─' * (width - 2)}┐{RESET}")
+        print(f"
+{color}?{'?' * inner}?{RESET}")
 
     if isinstance(content, list):
         for line in content:
             if isinstance(line, dict):
                 for key, value in line.items():
-                    print(f"{color}│{RESET} {W}{key}:{RESET} {value}")
+                    text = f"{W}{key}:{RESET} {value}"
+                    wrapped = textwrap.wrap(str(text), width=content_width) or [""]
+                    for piece in wrapped:
+                        print(f"{color}?{RESET} {pad_right(piece, content_width)} {color}?{RESET}")
             else:
-                print(f"{color}│{RESET} {line}")
+                wrapped = textwrap.wrap(str(line), width=content_width) or [""]
+                for piece in wrapped:
+                    print(f"{color}?{RESET} {pad_right(piece, content_width)} {color}?{RESET}")
     else:
-        wrapped = textwrap.fill(str(content), width=width-4)
-        for line in wrapped.split('\n'):
-            print(f"{color}│{RESET} {line}")
+        wrapped = textwrap.wrap(str(content), width=content_width) or [""]
+        for piece in wrapped:
+            print(f"{color}?{RESET} {pad_right(piece, content_width)} {color}?{RESET}")
 
-    print(f"{color}└{'─' * (width - 2)}┘{RESET}")
+    print(f"{color}?{'?' * inner}?{RESET}")
 
 def format_price(price):
     """Format price with thousand separators"""
@@ -88,15 +114,33 @@ def format_duration(validity):
 def format_quota_with_icon(quota_type, total, remaining):
     """Format quota with appropriate icon"""
     if quota_type == "DATA":
-        icon = "📊"
+        icon = "??"
     elif quota_type == "VOICE":
-        icon = "📞"
+        icon = "??"
     elif quota_type == "TEXT":
-        icon = "💬"
+        icon = "??"
     else:
-        icon = "📦"
+        icon = "??"
 
     return f"{icon} {remaining}/{total}"
+
+
+def _wrap_tnc(detail, width):
+    content_width = max(20, width - 6)
+    lines = []
+    for raw in detail.splitlines():
+        text = raw.strip()
+        if not text:
+            continue
+        wrapped = textwrap.wrap(text, width=content_width - 2) or [""]
+        for i, piece in enumerate(wrapped):
+            prefix = "? " if i == 0 else "  "
+            lines.append(f"{D}{prefix}{piece}{RESET}")
+            if len(lines) >= 8:
+                break
+        if len(lines) >= 8:
+            break
+    return lines
 
 
 def show_package_details(api_key, tokens, package_option_code, is_enterprise, option_order=-1):
@@ -106,7 +150,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
     width = get_terminal_width()
 
     clear_screen()
-    print_header("📋 DETAIL PAKET", width)
+    print_header("📋 ?? DETAIL PAKET", width)
 
     package = get_package(api_key, tokens, package_option_code)
     if not package:
@@ -162,7 +206,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         {f"{W}Parent Code{RESET}": f"{D}{parent_code}{RESET}"}
     ]
 
-    print_card(overview_content, "📊 OVERVIEW PAKET", C, width)
+    print_card(overview_content, "📊 ?? OVERVIEW PAKET", C, width)
 
     # Display Benefits Card
     benefits = package["package_option"]["benefits"]
@@ -199,7 +243,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                 f"{icon} {W}{benefit_name}{RESET}": f"{G}{display}{unlimited_mark}"
             })
 
-        print_card(benefits_content, "🎁 BENEFITS & QUOTA", G, width)
+        print_card(benefits_content, "🎁 ?? BENEFITS & QUOTA", G, width)
 
     # Display Addons (if available)
     addons = get_addons(api_key, tokens, package_option_code)
@@ -214,27 +258,21 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         if len(bonuses) > 3:
             addons_content.append({f"{D}... dan {len(bonuses)-3} bonus lainnya{RESET}": ""})
 
-        print_card(addons_content, "🎉 BONUS TERSEDIA", Y, width)
+        print_card(addons_content, "🎉 ?? BONUS TERSEDIA", Y, width)
 
     # Display Terms & Conditions
     if detail and len(detail.strip()) > 0:
-        # Simplify TNC display
-        tnc_lines = detail.split('\n')
-        simplified_tnc = []
-        for line in tnc_lines[:5]:  # Show only first 5 lines
-            if line.strip():
-                simplified_tnc.append(f"{D}• {line.strip()}{RESET}")
-
-        if len(tnc_lines) > 5:
-            simplified_tnc.append(f"{D}... (lihat lengkap di aplikasi){RESET}")
-
-        print_card(simplified_tnc, "📄 SYARAT & KETENTUAN", M, width)
+        tnc_lines = _wrap_tnc(detail, width)
+        if tnc_lines:
+            if len(detail.splitlines()) > 8:
+                tnc_lines.append(f"{D}... (lihat lengkap di aplikasi){RESET}")
+            print_card(tnc_lines, "?? SYARAT & KETENTUAN", M, width)
 
     # Menu Options
     in_package_detail_menu = True
     while in_package_detail_menu:
         print(f"\n{C}┌{'─' * (width - 2)}┐{RESET}")
-        print(f"{C}│{W}{B}🚀 PILIHAN PEMBELIAN{RESET}".ljust(width - 1) + f"{C}│{RESET}")
+        print(f"{C}│{W}{B}🚀 ?? PILIHAN PEMBELIAN{RESET}".ljust(width - 1) + f"{C}│{RESET}")
         print(f"{C}├{'─' * (width - 2)}┤{RESET}")
 
         options_grid = [
@@ -684,7 +722,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
     in_package_menu = True
     while in_package_menu:
         clear_screen()
-        print_header(f"📦 PAKET {family_name.upper()}", width)
+        print_header(f"📦 ?? PAKET {family_name.upper()}", width)
 
         # Family Info Card
         family_info = [
@@ -732,11 +770,11 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
                 option_number += 1
 
             # Print variant card
-            print_card(variant_content + options_content, f"🎯 VARIANT {variant_idx}", M, width)
+            print_card(variant_content + options_content, f"🎯 ?? VARIANT {variant_idx}", M, width)
 
         # Navigation Menu
         print(f"\n{C}┌{'─' * (width - 2)}┐{RESET}")
-        print(f"{C}│{W}{B}📋 MENU NAVIGASI{RESET}".ljust(width - 1) + f"{C}│{RESET}")
+        print(f"{C}│{W}{B}📋 ?? MENU NAVIGASI{RESET}".ljust(width - 1) + f"{C}│{RESET}")
         print(f"{C}├{'─' * (width - 2)}┤{RESET}")
 
         nav_options = [
@@ -840,7 +878,7 @@ def fetch_my_packages():
 
         # Display packages
         clear_screen()
-        print_header("📦 DAFTAR PAKET SAYA", width)
+        print_header("📦 DAFTAR ?? PAKET SAYA", width)
 
         if not package_buffer:
             print_card(f"{Y}Tidak ada paket aktif.{RESET}", "ℹ INFO", Y, width)
@@ -860,11 +898,11 @@ def fetch_my_packages():
                 # Add quota code
                 card_content.append(f"{W}╰ {M}ID: {pkg['q_code'][:12]}...{RESET}")
 
-                print_card(card_content, f"📱 PAKET {pkg['num']}", C, width)
+                print_card(card_content, f"📱 ?? PAKET {pkg['num']}", C, width)
 
         # Navigation Menu
         print(f"\n{C}┌{'─' * (width - 2)}┐{RESET}")
-        print(f"{C}│{W}{B}📋 MENU NAVIGASI{RESET}".ljust(width - 1) + f"{C}│{RESET}")
+        print(f"{C}│{W}{B}📋 ?? MENU NAVIGASI{RESET}".ljust(width - 1) + f"{C}│{RESET}")
         print(f"{C}├{'─' * (width - 2)}┤{RESET}")
 
         nav_options = [
