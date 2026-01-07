@@ -8,7 +8,7 @@ import re
 import sys
 import textwrap
 import unicodedata
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 # =========================
 # ANSI Colors (opsional)
@@ -39,28 +39,105 @@ LM, RM = "├", "┤"
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
+# coba pakai wcwidth kalau ada (paling akurat di terminal)
+try:
+    from wcwidth import wcwidth as _wcwidth, wcswidth as _wcswidth  # type: ignore
+except Exception:
+    _wcwidth = None
+    _wcswidth = None
+
 
 # =========================
-# Utils: width-aware padding
+# Utils: strip ANSI
 # =========================
 def strip_ansi(s: str) -> str:
     return ANSI_RE.sub("", str(s))
 
 
+# =========================
+# Width calculation (FIX emoji width)
+# =========================
+def _char_width_fallback(ch: str) -> int:
+    """
+    Fallback lebar karakter kalau wcwidth tidak tersedia.
+    Lebih bagus dari east_asian_width murni, karena banyak emoji butuh width=2.
+    """
+    if not ch:
+        return 0
+
+    code = ord(ch)
+
+    # Control chars
+    if code < 32 or code == 127:
+        return 0
+
+    # Variation Selectors (emoji variation) -> 0
+    if 0xFE00 <= code <= 0xFE0F:
+        return 0
+
+    # Zero Width Joiner -> 0
+    if code == 0x200D:
+        return 0
+
+    # Combining marks -> 0
+    if unicodedata.combining(ch):
+        return 0
+
+    # Banyak emoji/simbol ada di kategori "So" (Symbol, other) dan tampil 2 kolom di terminal
+    cat = unicodedata.category(ch)
+    if cat == "So":
+        return 2
+
+    # East Asian wide/fullwidth -> 2
+    eaw = unicodedata.east_asian_width(ch)
+    if eaw in ("F", "W"):
+        return 2
+
+    # Beberapa blok emoji umum (heuristik)
+    # Emoticons, Misc Symbols, Dingbats, Transport, Supplemental Symbols, dll
+    if (
+        0x1F300 <= code <= 0x1FAFF  # mayoritas emoji modern
+        or 0x2600 <= code <= 0x27BF  # misc symbols + dingbats
+        or 0x2300 <= code <= 0x23FF  # misc technical (sebagian tampil 2)
+    ):
+        return 2
+
+    return 1
+
+
+def char_width(ch: str) -> int:
+    """
+    Lebar 1 karakter untuk tampilan terminal (ANSI sudah di-handle di level token).
+    """
+    if _wcwidth is not None:
+        w = _wcwidth(ch)
+        # wcwidth mengembalikan -1 untuk karakter "non printable"
+        return 0 if w < 0 else w
+    return _char_width_fallback(ch)
+
+
 def display_width(text: Any) -> int:
     """
-    Hitung lebar tampilan string (mengabaikan ANSI dan memperhitungkan wide char).
+    Hitung lebar tampilan string:
+    - mengabaikan ANSI
+    - pakai wcwidth bila tersedia (akurasi terbaik utk emoji/box drawing)
     """
-    stripped = strip_ansi(str(text))
+    s = strip_ansi(str(text))
+
+    if _wcswidth is not None:
+        w = _wcswidth(s)
+        return 0 if w < 0 else w
+
     width = 0
-    for ch in stripped:
-        width += 2 if unicodedata.east_asian_width(ch) in ("F", "W") else 1
+    for ch in s:
+        width += char_width(ch)
     return width
 
 
 def pad_right(text: Any, width: int) -> str:
     s = str(text)
-    return f"{s}{' ' * max(0, width - display_width(s))}"
+    pad = max(0, width - display_width(s))
+    return f"{s}{' ' * pad}"
 
 
 def get_terminal_width(min_width: int = 40, fallback: int = 50, padding: int = 2) -> int:
@@ -76,9 +153,8 @@ def get_terminal_width(min_width: int = 40, fallback: int = 50, padding: int = 2
 
 
 # =========================
-# Text wrapping helpers
+# Wrapping helpers (FIX: width-aware)
 # =========================
-
 def wrap_lines(
     text: Any,
     width: int,
@@ -89,56 +165,51 @@ def wrap_lines(
 ) -> List[str]:
     """
     Wrap teks berdasarkan DISPLAY WIDTH (bukan len()),
-    aman untuk ANSI color codes, dan lebih rapih di Termux.
+    aman untuk ANSI color codes.
     """
     s = str(text)
     if drop_empty and not s.strip():
         return []
 
-    # Tokenize: ANSI escapes atau karakter biasa
+    # Tokenize: ANSI escapes atau karakter tunggal
     tokens = re.findall(r"\x1b\[[0-9;]*m|.", s)
 
-    def _ch_w(ch: str) -> int:
-        # ANSI tidak punya lebar tampilan
-        if ANSI_RE.fullmatch(ch):
+    def _tok_w(tok: str) -> int:
+        if ANSI_RE.fullmatch(tok):
             return 0
-        # Lebar 2 untuk wide char (termasuk banyak emoji)
-        return 2 if unicodedata.east_asian_width(ch) in ("F", "W") else 1
+        return char_width(tok)
 
     lines: List[str] = []
     cur: List[str] = []
     cur_w = 0
 
-    def flush():
+    def flush() -> None:
         nonlocal cur, cur_w
-        out = "".join(cur).rstrip()
-        lines.append(out)
+        lines.append("".join(cur).rstrip())
         cur = []
         cur_w = 0
 
-    # helper: add string (indent) tanpa menghitung ANSI
-    def add_str(raw: str):
+    def add_str(raw: str) -> None:
         nonlocal cur, cur_w
         for t in re.findall(r"\x1b\[[0-9;]*m|.", raw):
             cur.append(t)
-            cur_w += _ch_w(t)
+            cur_w += _tok_w(t)
 
-    # indent awal
     if indent_first:
         add_str(indent_first)
 
     i = 0
     while i < len(tokens):
         t = tokens[i]
-        w = _ch_w(t)
+        w = _tok_w(t)
 
-        # kalau char normal dan akan overflow, pindah baris
+        # pindah baris kalau overflow
         if w > 0 and cur_w + w > width:
             flush()
             if indent_next:
                 add_str(indent_next)
 
-            # skip spasi awal baris
+            # skip spasi awal baris (biar rapi)
             if not ANSI_RE.fullmatch(t) and t == " ":
                 i += 1
                 continue
@@ -147,40 +218,26 @@ def wrap_lines(
         cur_w += w
         i += 1
 
-    # flush terakhir
     if cur:
         flush()
 
-    # Kalau hasil wrap kosong
-    if not lines:
-        return [""]
-
-    return lines
+    return lines if lines else [""]
 
 
-def kv_lines(
-    kv: Dict[Any, Any],
-    width: int,
-    *,
-    sep: str = ": ",
-) -> List[str]:
+def kv_lines(kv: Dict[Any, Any], width: int, *, sep: str = ": ") -> List[str]:
     """
     Ubah dict key->value menjadi baris-baris yang wrap.
     """
-    lines: List[str] = []
+    out: List[str] = []
     for k, v in kv.items():
-        base = f"{k}{sep}{v}"
-        lines.extend(wrap_lines(base, width))
-    return lines
+        out.extend(wrap_lines(f"{k}{sep}{v}", width))
+    return out
 
 
 # =========================
 # Core UI: header & card
 # =========================
 def print_header(title: str, width: Optional[int] = None, color: str = C) -> None:
-    """
-    Header 3 baris, border rapi.
-    """
     if width is None:
         width = get_terminal_width()
     inner = width - 2
@@ -196,11 +253,6 @@ def print_card(
     width: Optional[int] = None,
     color: str = G,
 ) -> None:
-    """
-    Card box rapi:
-    - content bisa string
-    - atau list berisi string / dict
-    """
     if width is None:
         width = get_terminal_width()
 
@@ -241,10 +293,6 @@ def print_menu_box(
     width: Optional[int] = None,
     color: str = C,
 ) -> None:
-    """
-    Cetak kotak menu sederhana dengan daftar opsi.
-    options: list string (sudah berformat/berwarna juga boleh).
-    """
     if width is None:
         width = get_terminal_width()
 
@@ -263,9 +311,6 @@ def print_menu_box(
 
 
 def input_box(prompt: str, *, width: Optional[int] = None) -> str:
-    """
-    Input dengan kotak kecil (opsional).
-    """
     if width is None:
         width = get_terminal_width()
     w = max(16, min(width // 3, 30))
@@ -287,10 +332,6 @@ def print_paged(
     page_size: int = 12,
     pause_text: str = "Tekan Enter untuk lanjut...",
 ) -> None:
-    """
-    Cetak list baris panjang per halaman (paging).
-    lines: list string (atau objek yang bisa str()).
-    """
     if width is None:
         width = get_terminal_width()
 
@@ -307,7 +348,6 @@ def print_paged(
 
         start = end
         page += 1
-
         if start < total:
             input(f"{W}{pause_text}{RESET}")
 
@@ -322,10 +362,6 @@ def wrap_bullets(
     bullet: str = "• ",
     bullet_color: str = D,
 ) -> List[str]:
-    """
-    Wrap teks menjadi bullet list (tiap paragraf jadi bullet).
-    Cocok untuk Syarat & Ketentuan hasil HTML->text.
-    """
     content_width = max(20, width - 6)
     out: List[str] = []
     for raw in str(text).splitlines():
