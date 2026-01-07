@@ -569,7 +569,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             variant_content = [
                 f"{B}{Y}Variant {variant_idx}: {variant_name}{RESET}",
                 f"{D}Kode: {variant_code}{RESET}",
-                
+                f"{W}{H * (width - 6)}{RESET}",
             ]
 
             options_content = []
@@ -627,7 +627,6 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             is_enterprise,
             option_order=selected_pkg["option_order"],
         )
-
 def fetch_my_packages():
     width = get_terminal_width()
 
@@ -643,7 +642,8 @@ def fetch_my_packages():
             out += ch
         return out + "..."
 
-    BREAK = "\u200b"  # Zero Width Space (pemutus line-joining di Termux)
+    BREAK = "\u200b"  # pemutus line-joining (Termux)
+    SHIFT_W = 2       # geser 2 kolom ke kanan untuk kolom ":" dan angka
 
     while True:
         api_key = AuthInstance.api_key
@@ -708,22 +708,17 @@ def fetch_my_packages():
             print_card(f"{Y}Tidak ada paket aktif.{RESET}", "ℹ INFO", width=width, color=Y)
         else:
             for pkg in package_buffer:
-                # lebar area isi card (tanpa border + spasi kiri kanan)
                 content_width = width - 4
 
-                # rapihin nama paket biar gak over
                 pkg_name = truncate_to_width(pkg["name"], max(10, content_width - 6))
 
                 card_content = [
                     f"{B}{Y}{pkg['num']}. {pkg_name}{RESET}",
-                    f"{D}{'-' * content_width}{RESET}",  # optional (boleh dihapus kalau gak mau garis)
+                    f"{D}{'-' * content_width}{RESET}",  # opsional (hapus kalau gak mau garis)
                 ]
 
                 benefits = pkg.get("benefits", [])
                 n = len(benefits)
-
-                # benefits tree rapi
-                RIGHT_OFFSET = 2  # ⬅️ ini kuncinya
 
                 for idx, b in enumerate(benefits):
                     name = str(b.get("name", ""))
@@ -737,34 +732,35 @@ def fetch_my_packages():
                     sep = f"{W}: {RESET}"
                     right = f"{G}{usage}{RESET}"
 
+                    # hitung max lebar nama (ikut SHIFT_W supaya kolom kanan lebih ke kanan)
                     fixed = (
                         display_width(prefix)
                         + display_width(sep)
                         + display_width(right)
-                        + RIGHT_OFFSET        # ⬅️ dorong ke kanan
+                        + SHIFT_W
                     )
-
                     max_name_w = max(6, content_width - fixed - 1)
                     name = truncate_to_width(name, max_name_w)
 
                     left = f"{D}{name}{RESET}"
 
+                    # filler dikurangi SHIFT_W supaya total tidak overflow
                     filler = content_width - (
                         display_width(prefix)
                         + display_width(left)
                         + display_width(sep)
                         + display_width(right)
-                        + RIGHT_OFFSET        # ⬅️ dorong ke kanan
                     )
-                    filler = max(1, filler)
+                    filler = max(1, filler - SHIFT_W)
 
                     card_content.append(
-                        f"{prefix}{left}{' ' * filler}{sep}{right}"
+                        f"{prefix}{left}{' ' * filler}{' ' * SHIFT_W}{sep}{right}"
                     )
-                # ID: juga pakai └─ (sesuai request kamu)
+
+                # ID: juga pakai └─ (sesuai request)
                 id_prefix = f"{W}└{BREAK}─ {RESET}"
                 id_text = f"{M}ID: {pkg['q_code'][:12]}...{RESET}"
-                card_content.append(f"{id_prefix}{id_text}")
+                card_content.append(f"{id_prefix}{' ' * SHIFT_W}{id_text}")
 
                 print_card(card_content, f"📱 PAKET {pkg['num']}", width=width, color=C)
 
