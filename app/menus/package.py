@@ -566,11 +566,14 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             variant_name = variant["name"]
             variant_code = variant["package_variant_code"]
 
+            content_width = width - 6
+
             variant_content = [
                 f"{B}{Y}Variant {variant_idx}: {variant_name}{RESET}",
                 f"{D}Kode: {variant_code}{RESET}",
-                f"{W}{H * (width - 4)}{RESET}",
+                f"{D}{'-' * content_width}{RESET}",
             ]
+
 
             options_content = []
             for option in variant["package_options"]:
