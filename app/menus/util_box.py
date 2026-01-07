@@ -75,6 +75,10 @@ def _char_width_fallback(ch: str) -> int:
     if code == 0x200D:
         return 0
 
+    # ✅ Zero Width Space / Word Joiner -> 0  (INI YANG KURANG)
+    if code in (0x200B, 0x2060):
+        return 0
+
     # Combining marks -> 0
     if unicodedata.combining(ch):
         return 0
