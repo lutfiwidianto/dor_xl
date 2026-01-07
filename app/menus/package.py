@@ -691,7 +691,7 @@ def fetch_my_packages():
             )
 
         clear_screen()
-        print_header("📦 DAFTAR PAKET SAYA", width)
+        print_header("DAFTAR PAKET SAYA", width)
 
         if not package_buffer:
             print_card(f"{Y}Tidak ada paket aktif.{RESET}", "ℹ INFO", width=width, color=Y)
