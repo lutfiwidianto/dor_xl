@@ -62,19 +62,18 @@ def get_otp(contact: str) -> str:
         "User-Agent": UA,
     }
 
-    print("Requesting OTP...")
+    print("📨 Mengirim OTP...")
     try:
         response = requests.request("GET", url, data=payload, headers=headers, params=querystring, timeout=30)
-        print("response body", response.text)
         json_body = json.loads(response.text)
     
         if "subscriber_id" not in json_body:
-            print(json_body.get("error", "No error message in response"))
+            print(f"❌ {json_body.get('error', 'Gagal meminta OTP')}")
             raise ValueError("Subscriber ID not found in response")
         
         return json_body["subscriber_id"]
     except Exception as e:
-        print(f"Error requesting OTP: {e}")
+        print(f"❌ Gagal meminta OTP: {e}")
         return None
 
 def extend_session(subscriber_id: str) -> str:
@@ -105,11 +104,11 @@ def extend_session(subscriber_id: str) -> str:
         "User-Agent": UA,
     }
     
-    print("Extending session...")
+    print("🔄 Memperpanjang sesi...")
     try:
         response = requests.get(url, headers=headers, params=querystring, timeout=30)
         if response.status_code != 200:
-            print(f"Failed to extend session: {response.status_code} - {response.text}")
+            print(f"❌ Gagal memperpanjang sesi: {response.status_code} - {response.text}")
             return None
         
         data = response.json()
@@ -117,7 +116,7 @@ def extend_session(subscriber_id: str) -> str:
         
         return exchange_code
     except Exception as e:
-        print(f"Error extending session: {e}")
+        print(f"❌ Gagal memperpanjang sesi: {e}")
         return None
 
 def submit_otp(
@@ -170,19 +169,19 @@ def submit_otp(
         "User-Agent": UA,
     }
 
-    print("Submitting OTP...")
+    print("🔐 Memverifikasi OTP...")
     try:
         response = requests.post(url, data=payload, headers=headers, timeout=30)
         json_body = json.loads(response.text)
                 
         if "error" in json_body:
-            print(f"[Error submit_otp]: {json_body}")
+            print(f"❌ Gagal verifikasi OTP: {json_body}")
             return None
         
-        print("Login successful.")
+        print("✅ Login berhasil.")
         return json_body
     except requests.RequestException as e:
-        print(f"[Error submit_otp]: {e}")
+        print(f"❌ Gagal verifikasi OTP: {e}")
         return None
 
 def get_new_token(api_key: str, refresh_token: str, subscriber_id: str) -> str:
@@ -211,7 +210,7 @@ def get_new_token(api_key: str, refresh_token: str, subscriber_id: str) -> str:
         "refresh_token": refresh_token
     }
 
-    print("Refreshing token...")
+    print("🔄 Refreshing token...")
     resp = requests.post(url, headers=headers, data=data, timeout=30)
     if resp.status_code == 400:
         if resp.json().get("error_description") != "Session not active":
