@@ -722,7 +722,8 @@ def fetch_my_packages():
                     name = str(b.get("name", ""))
                     usage = str(b.get("usage", ""))
 
-                    prefix = f"{W}|--> {RESET}"
+                    BREAK = "\u200b"      # Zero Width Space
+                    prefix = f"{W}├{BREAK}─ {RESET}"
                     sep = f"{W}: {RESET}"
                     right = f"{G}{usage}{RESET}"
 
