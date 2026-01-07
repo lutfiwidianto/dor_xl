@@ -2,7 +2,6 @@ import json
 import sys
 import os
 import textwrap
-import re
 from datetime import datetime
 
 import requests
@@ -34,12 +33,6 @@ B = "\033[1m"   # Bold
 D = "\033[90m"  # Dark Gray
 RESET = "\033[0m"  # Reset
 
-ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
-
-def visible_len(text):
-    """Length without ANSI color codes."""
-    return len(ANSI_RE.sub("", str(text)))
-
 def get_terminal_width():
     """Get terminal width with fallback"""
     try:
@@ -49,46 +42,36 @@ def get_terminal_width():
         return 50
 
 def print_header(title, width, color=C):
-    """Print header"""
-    line = "-" * (width - 2)
-    print(f"{color}+{line}+{RESET}")
-    print(f"{color}|{RESET}{W}{B}{title.center(width - 2)}{RESET}{color}|{RESET}")
-    print(f"{color}+{line}+{RESET}")
+    """Print elegant header"""
+    print(f"{color}┏{'━' * (width - 2)}┓{RESET}")
+    print(f"{color}┃{W}{B}{title.center(width - 2)}{color}┃{RESET}")
+    print(f"{color}┗{'━' * (width - 2)}┛{RESET}")
 
 def print_card(content, title=None, color=G, width=None):
     """Print content in a card format"""
     if width is None:
         width = get_terminal_width()
 
-    line = "-" * (width - 2)
-    top = f"{color}+{line}+{RESET}"
-    print(f"\n{top}")
     if title:
-        print(f"{color}|{RESET}{W}{B}{title.center(width - 2)}{RESET}{color}|{RESET}")
-        print(top)
-
-    def print_line(text):
-        wrapped = textwrap.wrap(str(text), width=width - 4) or [""]
-        for piece in wrapped:
-            pad = " " * max(0, (width - 4) - visible_len(piece))
-            print(f"{color}|{RESET} {piece}{pad}{color}|{RESET}")
+        print(f"\n{color}┌{'─' * (width - 2)}┐{RESET}")
+        print(f"{color}│{W}{B}{title.center(width - 2)}{color}│{RESET}")
+        print(f"{color}├{'─' * (width - 2)}┤{RESET}")
+    else:
+        print(f"\n{color}┌{'─' * (width - 2)}┐{RESET}")
 
     if isinstance(content, list):
         for line in content:
             if isinstance(line, dict):
                 for key, value in line.items():
-                    print_line(f"{key}: {value}")
+                    print(f"{color}│{RESET} {W}{key}:{RESET} {value}")
             else:
-                print_line(line)
+                print(f"{color}│{RESET} {line}")
     else:
-        print_line(content)
+        wrapped = textwrap.fill(str(content), width=width-4)
+        for line in wrapped.split('\n'):
+            print(f"{color}│{RESET} {line}")
 
-    print(top)
-
-def print_prompt_divider(width):
-    """Small divider before/after input prompts."""
-    line = "-" * max(10, width // 2)
-    print(f"{D}{line}{RESET}")
+    print(f"{color}└{'─' * (width - 2)}┘{RESET}")
 
 def format_price(price):
     """Format price with thousand separators"""
@@ -105,13 +88,13 @@ def format_duration(validity):
 def format_quota_with_icon(quota_type, total, remaining):
     """Format quota with appropriate icon"""
     if quota_type == "DATA":
-        icon = "[DATA]"
+        icon = "📊"
     elif quota_type == "VOICE":
-        icon = "[VOICE]"
+        icon = "📞"
     elif quota_type == "TEXT":
-        icon = "[SMS]"
+        icon = "💬"
     else:
-        icon = "[OTHER]"
+        icon = "📦"
 
     return f"{icon} {remaining}/{total}"
 
@@ -123,11 +106,11 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
     width = get_terminal_width()
 
     clear_screen()
-    print_header("DETAIL PAKET", width)
+    print_header("📋 DETAIL PAKET", width)
 
     package = get_package(api_key, tokens, package_option_code)
     if not package:
-        print_card(f"{R}Gagal memuat detail paket.{RESET}", "ERROR", R, width)
+        print_card(f"{R}Gagal memuat detail paket.{RESET}", "❌ Error", R, width)
         pause()
         return False
 
@@ -179,7 +162,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         {f"{W}Parent Code{RESET}": f"{D}{parent_code}{RESET}"}
     ]
 
-    print_card(overview_content, "OVERVIEW PAKET", C, width)
+    print_card(overview_content, "📊 OVERVIEW PAKET", C, width)
 
     # Display Benefits Card
     benefits = package["package_option"]["benefits"]
@@ -193,10 +176,10 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
 
             if data_type == "VOICE" and total > 0:
                 display = f"{remaining/60:.0f}/{total/60:.0f} menit"
-                icon = "[VOICE]"
+                icon = "📞"
             elif data_type == "TEXT" and total > 0:
                 display = f"{remaining}/{total} SMS"
-                icon = "[SMS]"
+                icon = "💬"
             elif data_type == "DATA" and total > 0:
                 if total >= 1_000_000_000:
                     display = f"{remaining/1_000_000_000:.2f}/{total/1_000_000_000:.2f} GB"
@@ -206,17 +189,17 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                     display = f"{remaining/1_000:.2f}/{total/1_000:.2f} KB"
                 else:
                     display = f"{remaining}/{total} B"
-                icon = "[DATA]"
+                icon = "📊"
             else:
                 display = f"{remaining}/{total} ({data_type})"
-                icon = "[OTHER]"
+                icon = "📦"
 
-            unlimited_mark = f" {Y}(UNLIMITED){RESET}" if benefit.get("is_unlimited") else ""
+            unlimited_mark = f" {Y}♾️{RESET}" if benefit.get("is_unlimited") else ""
             benefits_content.append({
                 f"{icon} {W}{benefit_name}{RESET}": f"{G}{display}{unlimited_mark}"
             })
 
-        print_card(benefits_content, "BENEFITS & QUOTA", G, width)
+        print_card(benefits_content, "🎁 BENEFITS & QUOTA", G, width)
 
     # Display Addons (if available)
     addons = get_addons(api_key, tokens, package_option_code)
@@ -231,7 +214,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         if len(bonuses) > 3:
             addons_content.append({f"{D}... dan {len(bonuses)-3} bonus lainnya{RESET}": ""})
 
-        print_card(addons_content, "BONUS TERSEDIA", Y, width)
+        print_card(addons_content, "🎉 BONUS TERSEDIA", Y, width)
 
     # Display Terms & Conditions
     if detail and len(detail.strip()) > 0:
@@ -240,42 +223,44 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         simplified_tnc = []
         for line in tnc_lines[:5]:  # Show only first 5 lines
             if line.strip():
-                simplified_tnc.append(f"{D}- {line.strip()}{RESET}")
+                simplified_tnc.append(f"{D}• {line.strip()}{RESET}")
 
         if len(tnc_lines) > 5:
             simplified_tnc.append(f"{D}... (lihat lengkap di aplikasi){RESET}")
 
-        print_card(simplified_tnc, "SYARAT & KETENTUAN", M, width)
+        print_card(simplified_tnc, "📄 SYARAT & KETENTUAN", M, width)
 
     # Menu Options
     in_package_detail_menu = True
     while in_package_detail_menu:
-        # Payment Options Grid
+        print(f"\n{C}┌{'─' * (width - 2)}┐{RESET}")
+        print(f"{C}│{W}{B}🚀 PILIHAN PEMBELIAN{RESET}".ljust(width - 1) + f"{C}│{RESET}")
+        print(f"{C}├{'─' * (width - 2)}┤{RESET}")
+
         options_grid = [
             f"{C}[{W}1{C}] {W}Pulsa{RESET}        {C}[{W}2{C}] {W}E-Wallet{RESET}     {C}[{W}3{C}] {W}QRIS{RESET}",
             f"{C}[{W}4{C}] {W}Pulsa + Decoy{RESET} {C}[{W}5{C}] {W}Decoy V2{RESET}    {C}[{W}6{C}] {W}QRIS + Decoy{RESET}",
             f"{C}[{W}7{C}] {W}QRIS Decoy V2{RESET} {C}[{W}8{C}] {W}Beli N kali{RESET}",
         ]
+        for line in options_grid:
+            print(f"{C}│{RESET} {line.ljust(width - 4)} {C}│{RESET}")
 
-        menu_lines = options_grid[:]
-        # Special options for voucher redemption
         if payment_for == "REDEEM_VOUCHER":
             voucher_options = [
                 f"{C}[{W}B{C}] {W}Ambil Bonus{RESET}    {C}[{W}BA{C}] {W}Kirim Bonus{RESET}   {C}[{W}L{C}] {W}Tukar Poin{RESET}"
             ]
-            menu_lines.extend(voucher_options)
+            for line in voucher_options:
+                print(f"{C}│{RESET} {line.ljust(width - 4)} {C}│{RESET}")
 
-        # Bookmark option
         if option_order != -1:
-            menu_lines.append(f"{C}[{W}0{C}] {W}Tambah ke Bookmark{RESET}")
+            print(f"{C}│{RESET} {C}[{W}0{C}] {W}Tambah ke Bookmark{RESET}".ljust(width - 3) + f"{C}│{RESET}")
 
-        # Navigation
-        menu_lines.append(f"{C}[{R}00{C}] {W}Kembali{RESET}")
-        print_card(menu_lines, "PILIHAN PEMBELIAN", C, width)
+        print(f"{C}│{RESET} {C}[{R}00{C}] {W}Kembali{RESET}".ljust(width - 3) + f"{C}│{RESET}")
+        print(f"{C}└{'─' * (width - 2)}┘{RESET}")
 
-        print_prompt_divider(width)
-        choice = input(f" {B}{C}> {W}Pilihan: {RESET}").strip().lower()
-        print_prompt_divider(width)
+        print(f"\n{W}╭{'─' * (width // 3)}╮{RESET}")
+        choice = input(f" {B}{C}›{W} Pilihan: {RESET}").strip().lower()
+        print(f"{W}╰{'─' * (width // 3)}╯{RESET}")
 
         if choice == "00":
             return False
@@ -289,9 +274,9 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                 order=option_order,
             )
             if success:
-                print_card(f"{G}Paket berhasil ditambahkan ke bookmark{RESET}", "SUCCESS", G, width//2)
+                print_card(f"{G}✓ Paket berhasil ditambahkan ke bookmark{RESET}", "✅ SUCCESS", G, width//2)
             else:
-                print_card(f"{Y}Paket sudah ada di bookmark{RESET}", "INFO", Y, width//2)
+                print_card(f"{Y}⚠ Paket sudah ada di bookmark{RESET}", "ℹ INFO", Y, width//2)
             pause()
             continue
 
@@ -299,10 +284,10 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         elif choice == '1':
             result = settlement_balance(api_key, tokens, payment_items, payment_for, True)
             if result and result.get("status") == "SUCCESS":
-                print_card(f"{G}Pembelian berhasil!{RESET}", "SUCCESS", G, width)
+                print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ SUCCESS", G, width)
             else:
                 error_msg = result.get("message", "Unknown error") if result else "Gagal memproses"
-                print_card(f"{R}{error_msg}{RESET}", "ERROR", R, width)
+                print_card(f"{R}✗ {error_msg}{RESET}", "❌ ERROR", R, width)
             input(f"\n{W}Tekan Enter untuk kembali...{RESET}")
             return True
 
@@ -322,7 +307,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             decoy_package_detail = get_package(api_key, tokens, decoy["option_code"])
 
             if not decoy_package_detail:
-                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "ERROR", R, width)
+                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "❌ ERROR", R, width)
                 pause()
                 return False
 
@@ -342,7 +327,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                 f"{W}Harga Paket Utama:{RESET} {G}{format_price(price)}{RESET}",
                 f"{W}Harga Decoy:{RESET} {G}{format_price(decoy_package_detail['package_option']['price'])}{RESET}",
                 f"{W}Total:{RESET} {Y}{format_price(overwrite_amount)}{RESET}"
-            ], "TOTAL PEMBAYARAN", Y, width)
+            ], "💰 TOTAL PEMBAYARAN", Y, width)
 
             res = settlement_balance(
                 api_key,
@@ -359,7 +344,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                     error_msg_arr = error_msg.split("=")
                     valid_amount = int(error_msg_arr[1].strip())
 
-                    print_card(f"{Y}Mengadjust total amount ke: {format_price(valid_amount)}{RESET}", "ADJUSTMENT", Y, width)
+                    print_card(f"{Y}Mengadjust total amount ke: {format_price(valid_amount)}{RESET}", "⚠ ADJUSTMENT", Y, width)
 
                     res = settlement_balance(
                         api_key,
@@ -370,9 +355,9 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                         overwrite_amount=valid_amount,
                     )
                     if res and res.get("status", "") == "SUCCESS":
-                        print_card(f"{G}Pembelian berhasil!{RESET}", "SUCCESS", G, width)
+                        print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ SUCCESS", G, width)
             else:
-                print_card(f"{G}Pembelian berhasil!{RESET}", "SUCCESS", G, width)
+                print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ SUCCESS", G, width)
 
             pause()
             return True
@@ -383,7 +368,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             decoy_package_detail = get_package(api_key, tokens, decoy["option_code"])
 
             if not decoy_package_detail:
-                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "ERROR", R, width)
+                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "❌ ERROR", R, width)
                 pause()
                 return False
 
@@ -404,7 +389,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                 f"{W}Harga Decoy:{RESET} {G}{format_price(decoy_package_detail['package_option']['price'])}{RESET}",
                 f"{W}Total:{RESET} {Y}{format_price(overwrite_amount)}{RESET}",
                 f"{D}Menggunakan token confirmation dari decoy{RESET}"
-            ], "TOTAL PEMBAYARAN (V2)", Y, width)
+            ], "💰 TOTAL PEMBAYARAN (V2)", Y, width)
 
             res = settlement_balance(
                 api_key,
@@ -422,7 +407,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                     error_msg_arr = error_msg.split("=")
                     valid_amount = int(error_msg_arr[1].strip())
 
-                    print_card(f"{Y}Mengadjust total amount ke: {format_price(valid_amount)}{RESET}", "ADJUSTMENT", Y, width)
+                    print_card(f"{Y}Mengadjust total amount ke: {format_price(valid_amount)}{RESET}", "⚠ ADJUSTMENT", Y, width)
 
                     res = settlement_balance(
                         api_key,
@@ -434,9 +419,9 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                         token_confirmation_idx=-1
                     )
                     if res and res.get("status", "") == "SUCCESS":
-                        print_card(f"{G}Pembelian berhasil!{RESET}", "SUCCESS", G, width)
+                        print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ SUCCESS", G, width)
             else:
-                print_card(f"{G}Pembelian berhasil!{RESET}", "SUCCESS", G, width)
+                print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ SUCCESS", G, width)
 
             pause()
             return True
@@ -447,7 +432,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             decoy_package_detail = get_package(api_key, tokens, decoy["option_code"])
 
             if not decoy_package_detail:
-                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "ERROR", R, width)
+                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "❌ ERROR", R, width)
                 pause()
                 return False
 
@@ -467,7 +452,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                 f"{W}Harga Paket Decoy:{RESET} {G}{format_price(decoy_package_detail['package_option']['price'])}{RESET}",
                 f"{Y}Silakan sesuaikan amount (trial & error, 0 = malformed){RESET}",
                 f"{D}Menggunakan token confirmation idx: 1{RESET}"
-            ], "QRIS + DECOY", Y, width)
+            ], "💳 QRIS + DECOY", Y, width)
 
             show_qris_payment(
                 api_key,
@@ -487,7 +472,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             decoy_package_detail = get_package(api_key, tokens, decoy["option_code"])
 
             if not decoy_package_detail:
-                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "ERROR", R, width)
+                print_card(f"{R}Gagal memuat detail decoy package!{RESET}", "❌ ERROR", R, width)
                 pause()
                 return False
 
@@ -507,7 +492,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                 f"{W}Harga Paket Decoy:{RESET} {G}{format_price(decoy_package_detail['package_option']['price'])}{RESET}",
                 f"{Y}Silakan sesuaikan amount (trial & error, 0 = malformed){RESET}",
                 f"{D}Menggunakan token confirmation idx: 1{RESET}"
-            ], "QRIS DECOY V2", Y, width)
+            ], "💳 QRIS DECOY V2", Y, width)
 
             show_qris_payment(
                 api_key,
@@ -528,13 +513,13 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             delay_str = input(f"{W}Delay antar pembelian (detik): {RESET}").strip() or "0"
 
             if not n_times_str.isdigit() or not delay_str.isdigit():
-                print_card(f"{R}Input tidak valid!{RESET}", "ERROR", R, width//2)
+                print_card(f"{R}Input tidak valid!{RESET}", "❌ ERROR", R, width//2)
                 pause()
                 continue
 
             n_times = int(n_times_str)
             if n_times < 1:
-                print_card(f"{R}Jumlah minimal 1!{RESET}", "ERROR", R, width//2)
+                print_card(f"{R}Jumlah minimal 1!{RESET}", "❌ ERROR", R, width//2)
                 pause()
                 continue
 
@@ -551,13 +536,13 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             # Debug Share Package (keep your existing logic)
             pin = input(f"{W}Masukkan PIN (6 digit): {RESET}")
             if len(pin) != 6:
-                print_card(f"{R}PIN harus 6 digit!{RESET}", "ERROR", R, width//2)
+                print_card(f"{R}PIN harus 6 digit!{RESET}", "❌ ERROR", R, width//2)
                 pause()
                 continue
 
             auth_code = get_auth_code(tokens, pin, active_user["number"])
             if not auth_code:
-                print_card(f"{R}Gagal mendapatkan auth_code!{RESET}", "ERROR", R, width//2)
+                print_card(f"{R}Gagal mendapatkan auth_code!{RESET}", "❌ ERROR", R, width//2)
                 continue
 
             target_msisdn = input(f"{W}Nomor tujuan (62xxxxxxxx): {RESET}")
@@ -565,7 +550,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             url = "https://me.mashu.lol/pg-decoy-edu.json"
             response = requests.get(url, timeout=30)
             if response.status_code != 200:
-                print_card(f"{R}Gagal mengambil data decoy package!{RESET}", "ERROR", R, width)
+                print_card(f"{R}Gagal mengambil data decoy package!{RESET}", "❌ ERROR", R, width)
                 pause()
                 return None
 
@@ -599,7 +584,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                     error_msg_arr = error_msg.split("=")
                     valid_amount = int(error_msg_arr[1].strip())
 
-                    print_card(f"{Y}Mengadjust total amount ke: {format_price(valid_amount)}{RESET}", "ADJUSTMENT", Y, width)
+                    print_card(f"{Y}Mengadjust total amount ke: {format_price(valid_amount)}{RESET}", "⚠ ADJUSTMENT", Y, width)
 
                     res = show_qris_payment(
                         api_key,
@@ -613,9 +598,9 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                         stage_token=auth_code,
                     )
                     if res and res.get("status", "") == "SUCCESS":
-                        print_card(f"{G}Pembelian berhasil!{RESET}", "SUCCESS", G, width)
+                        print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ SUCCESS", G, width)
             else:
-                print_card(f"{G}Pembelian berhasil!{RESET}", "SUCCESS", G, width)
+                print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ SUCCESS", G, width)
 
             pause()
 
@@ -659,7 +644,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             return True
 
         else:
-            print_card(f"{R}Pilihan tidak valid!{RESET}", "PERINGATAN", R, width//2)
+            print_card(f"{R}Pilihan tidak valid!{RESET}", "⚠ PERINGATAN", R, width//2)
             pause()
 
     return False
@@ -670,7 +655,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
     api_key = AuthInstance.api_key
     tokens = AuthInstance.get_active_tokens()
     if not tokens:
-        print_card(f"{R}Token tidak ditemukan!{RESET}", "ERROR", R)
+        print_card(f"{R}Token tidak ditemukan!{RESET}", "❌ ERROR", R)
         pause()
         return None
 
@@ -678,7 +663,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
     data = get_family(api_key, tokens, family_code, is_enterprise, migration_type)
 
     if not data:
-        print_card(f"{R}Gagal memuat data keluarga paket!{RESET}", "ERROR", R, width)
+        print_card(f"{R}Gagal memuat data keluarga paket!{RESET}", "❌ ERROR", R, width)
         pause()
         return None
 
@@ -693,7 +678,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
     in_package_menu = True
     while in_package_menu:
         clear_screen()
-        print_header(f"PAKET {family_name.upper()}", width)
+        print_header(f"📦 PAKET {family_name.upper()}", width)
 
         # Family Info Card
         family_info = [
@@ -703,7 +688,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             {f"{W}Mata Uang{RESET}": f"{M}{price_currency}{RESET}"}
         ]
 
-        print_card(family_info, "INFORMASI KELUARGA PAKET", C, width)
+        print_card(family_info, "📊 INFORMASI KELUARGA PAKET", C, width)
 
         # Display Variants and Packages
         option_number = 1
@@ -715,7 +700,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
             variant_content = [
                 f"{B}{Y}Variant {variant_idx}: {variant_name}{RESET}",
                 f"{D}Kode: {variant_code}{RESET}",
-                f"{W}{'-' * (width - 6)}{RESET}"
+                f"{W}{'─' * (width - 6)}{RESET}"
             ]
 
             options_content = []
@@ -741,25 +726,31 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
                 option_number += 1
 
             # Print variant card
-            print_card(variant_content + options_content, f"VARIANT {variant_idx}", M, width)
+            print_card(variant_content + options_content, f"🎯 VARIANT {variant_idx}", M, width)
 
         # Navigation Menu
+        print(f"\n{C}┌{'─' * (width - 2)}┐{RESET}")
+        print(f"{C}│{W}{B}📋 MENU NAVIGASI{RESET}".ljust(width - 1) + f"{C}│{RESET}")
+        print(f"{C}├{'─' * (width - 2)}┤{RESET}")
+
         nav_options = [
             f"{C}[{W}No{C}]{RESET} {W}Pilih paket dengan nomor{RESET}",
             f"{C}[{R}00{C}]{RESET} {W}Kembali ke menu utama{RESET}"
         ]
-        print_card(nav_options, "MENU NAVIGASI", C, width)
+        for option in nav_options:
+            print(f"{C}│{RESET} {option.ljust(width - 4)} {C}│{RESET}")
+        print(f"{C}└{'─' * (width - 2)}┘{RESET}")
 
-        print_prompt_divider(width)
-        pkg_choice = input(f" {B}{C}> {W}Pilih paket (1-{option_number-1}): {RESET}").strip()
-        print_prompt_divider(width)
+        print(f"\n{W}╭{'─' * (width // 3)}╮{RESET}")
+        pkg_choice = input(f" {B}{C}›{W} Pilih paket (1-{option_number-1}): {RESET}").strip()
+        print(f"{W}╰{'─' * (width // 3)}╯{RESET}")
 
         if pkg_choice == "00":
             in_package_menu = False
             return None
 
         if not pkg_choice.isdigit():
-            print_card(f"{R}Masukkan nomor yang valid!{RESET}", "PERINGATAN", R, width//2)
+            print_card(f"{R}Masukkan nomor yang valid!{RESET}", "⚠ PERINGATAN", R, width//2)
             pause()
             continue
 
@@ -767,7 +758,7 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
         selected_pkg = next((p for p in packages if p["number"] == selected_num), None)
 
         if not selected_pkg:
-            print_card(f"{R}Paket #{selected_num} tidak ditemukan!{RESET}", "ERROR", R, width//2)
+            print_card(f"{R}Paket #{selected_num} tidak ditemukan!{RESET}", "❌ ERROR", R, width//2)
             pause()
             continue
 
@@ -792,22 +783,22 @@ def fetch_my_packages():
         api_key = AuthInstance.api_key
         tokens = AuthInstance.get_active_tokens()
         if not tokens:
-            print_card(f"{R}Error: Token tidak ditemukan!{RESET}", "ERROR", R, width)
+            print_card(f"{R}Error: Token tidak ditemukan!{RESET}", "❌ ERROR", R, width)
             pause()
             return None
 
         clear_screen()
 
         # Loading animation
-        print(f"\n{W}Sedang sinkronisasi data paket...{RESET}")
-        print(f"{W}{'-' * (width // 2)}{RESET}")
+        print(f"\n{W}🔄{RESET} {C}Sedang sinkronisasi data paket...{RESET}")
+        print(f"{W}{'─' * (width // 2)}{RESET}")
 
         res = send_api_request(api_key, "api/v8/packages/quota-details",
                               {"is_enterprise": False, "lang": "en", "family_member_id": ""},
                               tokens.get("id_token"), "POST")
 
         if res.get("status") != "SUCCESS":
-            print_card(f"{R}Gagal memuat data paket!{RESET}", "ERROR", R, width)
+            print_card(f"{R}Gagal memuat data paket!{RESET}", "❌ ERROR", R, width)
             pause()
             return None
 
@@ -843,38 +834,45 @@ def fetch_my_packages():
 
         # Display packages
         clear_screen()
-        print_header("DAFTAR PAKET SAYA", width)
+        print_header("📦 DAFTAR PAKET SAYA", width)
 
         if not package_buffer:
-            print_card(f"{Y}Tidak ada paket aktif.{RESET}", "INFO", Y, width)
+            print_card(f"{Y}Tidak ada paket aktif.{RESET}", "ℹ INFO", Y, width)
         else:
             for pkg in package_buffer:
                 # Package Card
                 card_content = [
                     f"{B}{Y}{pkg['num']}. {pkg['name']}{RESET}",
-                    f"{D}{'-' * (width - 6)}{RESET}"
+                    f"{D}{'─' * (width - 6)}{RESET}"
                 ]
 
                 # Add benefits
                 for b in pkg["benefits"]:
-                    card_content.append(f"{W}- {D}{b['name']}{W}: {G}{b['usage']}{RESET}")
+                    space_filler = (width - len(b['name']) - len(b['usage']) - 10) * " "
+                    card_content.append(f"{W}├ {D}{b['name']}{space_filler}{W}: {G}{b['usage']}{RESET}")
 
                 # Add quota code
-                card_content.append(f"{W}ID: {M}{pkg['q_code'][:12]}...{RESET}")
+                card_content.append(f"{W}╰ {M}ID: {pkg['q_code'][:12]}...{RESET}")
 
-                print_card(card_content, f"PAKET {pkg['num']}", C, width)
+                print_card(card_content, f"📱 PAKET {pkg['num']}", C, width)
 
         # Navigation Menu
+        print(f"\n{C}┌{'─' * (width - 2)}┐{RESET}")
+        print(f"{C}│{W}{B}📋 MENU NAVIGASI{RESET}".ljust(width - 1) + f"{C}│{RESET}")
+        print(f"{C}├{'─' * (width - 2)}┤{RESET}")
+
         nav_options = [
             f"{C}[{W}No{C}]{RESET} {W}Lihat detail paket{RESET}",
             f"{C}[{R}del No{C}]{RESET} {W}Unsubscribe paket{RESET}",
             f"{C}[{R}00{C}]{RESET} {W}Kembali{RESET}"
         ]
-        print_card(nav_options, "MENU NAVIGASI", C, width)
+        for option in nav_options:
+            print(f"{C}│{RESET} {option.ljust(width - 4)} {C}│{RESET}")
+        print(f"{C}└{'─' * (width - 2)}┘{RESET}")
 
-        print_prompt_divider(width)
-        choice = input(f" {B}{C}> {W}Pilihan: {RESET}").strip()
-        print_prompt_divider(width)
+        print(f"\n{W}╭{'─' * (width // 3)}╮{RESET}")
+        choice = input(f" {B}{C}›{W} Pilihan: {RESET}").strip()
+        print(f"{W}╰{'─' * (width // 3)}╯{RESET}")
 
         if choice == "00":
             in_my_packages_menu = False
@@ -890,16 +888,16 @@ def fetch_my_packages():
                     quota_code = package_buffer[idx-1]["q_code"]
                     unsubscribe_res = unsubscribe(api_key, tokens, quota_code)
                     if unsubscribe_res and unsubscribe_res.get("status") == "SUCCESS":
-                        print_card(f"{G}Paket berhasil di-unsubscribe!{RESET}", "SUCCESS", G, width)
+                        print_card(f"{G}✓ Paket berhasil di-unsubscribe!{RESET}", "✅ SUCCESS", G, width)
                     else:
                         error_msg = unsubscribe_res.get("message", "Unknown error") if unsubscribe_res else "Gagal"
-                        print_card(f"{R}{error_msg}{RESET}", "ERROR", R, width)
+                        print_card(f"{R}✗ {error_msg}{RESET}", "❌ ERROR", R, width)
                     pause()
             except ValueError:
-                print_card(f"{R}Format tidak valid!{RESET}", "ERROR", R, width//2)
+                print_card(f"{R}Format tidak valid!{RESET}", "❌ ERROR", R, width//2)
                 pause()
         else:
-            print_card(f"{R}Pilihan tidak valid!{RESET}", "PERINGATAN", R, width//2)
+            print_card(f"{R}Pilihan tidak valid!{RESET}", "⚠ PERINGATAN", R, width//2)
             pause()
 
     return None
