@@ -7,16 +7,7 @@ import time
 from app.client.store.search import get_family_list, get_store_packages
 from app.client.engsel import get_family, get_package, send_api_request
 from app.menus.util import clear_screen, pause
-from app.menus.util_box import (
-    display_width,
-    get_terminal_width,
-    pad_right,
-    print_header,
-    print_card,
-    print_menu_box,
-    input_box,
-    C,
-)
+from app.menus.util_box import display_width, get_terminal_width, pad_right
 from app.menus.package import show_package_details
 from app.service.auth import AuthInstance
 
@@ -468,23 +459,13 @@ def show_store_purchase_from_scan(subs_type: str = "PREPAID", is_enterprise: boo
 
     clear_screen()
     width = get_terminal_width()
-    print_header("BELI PAKET STORE DARI HASIL SCAN", width=width, color=C)
+    print("=" * width)
+    print("BELI PAKET STORE DARI HASIL SCAN".center(width))
+    print("=" * width)
     if added > 0:
-        print_card(
-            [f"Update provider: {added} item ditambahkan/diperbarui."],
-            "INFO",
-            width=width,
-            color=C,
-        )
-    print_menu_box(
-        "Instruksi",
-        [
-            "Pilih nomor paket untuk melihat detail & beli.",
-            "00 untuk kembali.",
-        ],
-        width=width,
-        color=C,
-    )
+        print(f"Update provider: {added} item ditambahkan/diperbarui.")
+    print("Pilih nomor paket untuk melihat detail & beli.")
+    print("00 untuk kembali.")
 
     # Tabel ringkas: no | nama paket | harga
     sep = " | "
@@ -498,7 +479,8 @@ def show_store_purchase_from_scan(subs_type: str = "PREPAID", is_enterprise: boo
         f"{pad_right('nama paket', col_name)}{sep}"
         f"{pad_right('harga', col_price)}"
     )
-    table_lines = [header, "-" * min(get_terminal_width(), display_width(header))]
+    print(header)
+    print("-" * min(get_terminal_width(), display_width(header)))
 
     for idx, row in enumerate(rows, start=1):
         price = _format_price(row.get("price", ""))
@@ -523,10 +505,9 @@ def show_store_purchase_from_scan(subs_type: str = "PREPAID", is_enterprise: boo
                 f"{pad_right(piece, col_name)}{sep}"
                 f"{pad_right(_truncate_to_width(right_price, col_price), col_price)}"
             )
-            table_lines.append(line)
+            print(line)
 
-    print_card(table_lines, "DAFTAR PAKET (TERMURAH)", width=width, color=C)
-    choice = input_box("Detail no:", width=width).strip()
+    choice = input("Detail no: ").strip()
     if choice == "00":
         return
 
