@@ -62,7 +62,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
     clear_screen()
     print_header("📋 DETAIL PAKET", width)
 
-    package = get_package(api_key, tokens, package_option_code)
+    package = get_package(api_key, tokens, package_option_code, lang="id")
     if not package:
         print_card(f"{R}Gagal memuat detail paket.{RESET}", "❌ Error", width=width, color=R)
         pause()

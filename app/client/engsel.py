@@ -200,7 +200,8 @@ def get_package(
     tokens: dict,
     package_option_code: str,
     package_family_code: str = "",
-    package_variant_code: str = ""
+    package_variant_code: str = "",
+    lang: str = "en"
     ) -> dict:
     path = "api/v8/xl-stores/options/detail"
     
@@ -213,7 +214,7 @@ def get_package(
         "is_enterprise": False,
         "is_shareable": False,
         "is_migration": False,
-        "lang": "en",
+        "lang": lang,
         "package_option_code": package_option_code,
         "is_upsell_pdp": False,
         "package_variant_code": package_variant_code
