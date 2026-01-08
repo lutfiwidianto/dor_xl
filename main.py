@@ -92,7 +92,9 @@ def show_main_menu(profile):
         balance_fmt = profile['balance']
 
     print(f"{C}" + "─" * WIDTH + f"{RESET}")
-    print_line(f"Nomor  : {Y}{profile['number']}{RESET} | Type : {M}{profile['subscription_type']}{RESET}")
+    number_str = str(profile.get("number", ""))
+    masked = f"{'*' * max(len(number_str) - 3, 0)}{number_str[-3:]}" if number_str else ""
+    print_line(f"Nomor  : {Y}{masked}{RESET} | Type : {M}{profile['subscription_type']}{RESET}")
     print_line(f"Pulsa  : {G}Rp {balance_fmt}{RESET} | Exp  : {R}{expired_at_dt}{RESET}")
     print_line(f"{profile['point_info']}")
     print(f"{C}" + "─" * WIDTH + f"{RESET}")
