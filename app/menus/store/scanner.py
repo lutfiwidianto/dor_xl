@@ -1,8 +1,17 @@
+import json
+import os
+import sys
+import threading
+import time
+
 from app.client.store.search import get_family_list, get_store_packages
 from app.client.engsel import get_family, get_package, send_api_request
 from app.menus.util import clear_screen, pause
 from app.menus.util_box import display_width, get_terminal_width, pad_right
 from app.service.auth import AuthInstance
+
+CACHE_PATH = "scanner_cache.json"
+CACHE_VERSION = 1
 
 
 def _normalize_name(name: str) -> str:
@@ -38,82 +47,84 @@ def _get_active_package_names(api_key: str, tokens: dict) -> set[str]:
     return {_normalize_name(q.get("name", "")) for q in quotas if q.get("name")}
 
 
-def _collect_from_store(api_key: str, tokens: dict, subs_type: str, is_enterprise: bool) -> list[dict]:
-    store_res = get_store_packages(api_key, tokens, subs_type, is_enterprise)
-    if not store_res:
-        return []
+def _load_cache() -> dict:
+    if not os.path.exists(CACHE_PATH):
+        return {"version": CACHE_VERSION, "entries": {}}
 
-    results = store_res.get("data", {}).get("results_price_only", [])
-    entries = []
-    for item in results:
-        if item.get("action_type") != "PDP":
-            continue
-        option_code = item.get("action_param", "")
-        if not option_code:
-            continue
-        detail = get_package(api_key, tokens, option_code)
-        if not detail:
-            continue
-
-        family_code = detail.get("package_family", {}).get("package_family_code", "")
-        family_name = detail.get("package_family", {}).get("name", "")
-        variant_name = detail.get("package_detail_variant", {}).get("name", "")
-        option_name = detail.get("package_option", {}).get("name", "")
-        price = detail.get("package_option", {}).get("price", 0)
-
-        name_parts = [family_name, variant_name, option_name]
-        name = " - ".join([p for p in name_parts if p]).strip()
-
-        entries.append(
-            {
-                "family_code": family_code,
-                "code": option_code,
-                "name": name,
-                "price": price,
-            }
-        )
-
-    return entries
+    try:
+        with open(CACHE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or "entries" not in data:
+            return {"version": CACHE_VERSION, "entries": {}}
+        if not isinstance(data.get("entries"), dict):
+            return {"version": CACHE_VERSION, "entries": {}}
+        return data
+    except Exception:
+        return {"version": CACHE_VERSION, "entries": {}}
 
 
-def _collect_from_family_list(api_key: str, tokens: dict, subs_type: str, is_enterprise: bool) -> list[dict]:
-    family_res = get_family_list(api_key, tokens, subs_type, is_enterprise)
-    if not family_res:
-        return []
+def _save_cache(cache: dict) -> None:
+    try:
+        cache["version"] = CACHE_VERSION
+        cache["updated_at"] = int(time.time())
+        with open(CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache, f, indent=2, ensure_ascii=True)
+    except Exception:
+        pass
 
-    families = family_res.get("data", {}).get("results", [])
-    entries = []
-    for fam in families:
-        family_code = fam.get("id", "")
-        if not family_code:
-            continue
 
-        family_data = get_family(api_key, tokens, family_code, is_enterprise)
-        if not family_data:
-            continue
+def _start_stop_listener(stop_flag: dict) -> None:
+    def _listen() -> None:
+        while not stop_flag.get("stop"):
+            line = sys.stdin.readline()
+            if not line:
+                continue
+            if line.strip().lower() in ("q", "quit", "00"):
+                stop_flag["stop"] = True
+                break
 
-        family_name = family_data.get("package_family", {}).get("name", "")
-        variants = family_data.get("package_variants", [])
-        for variant in variants:
-            variant_name = variant.get("name", "")
-            for option in variant.get("package_options", []):
-                option_code = option.get("package_option_code", "")
-                option_name = option.get("name", "")
-                price = option.get("price", 0)
+    t = threading.Thread(target=_listen, daemon=True)
+    t.start()
 
-                name_parts = [family_name, variant_name, option_name]
-                name = " - ".join([p for p in name_parts if p]).strip()
 
-                entries.append(
-                    {
-                        "family_code": family_code,
-                        "code": option_code,
-                        "name": name,
-                        "price": price,
-                    }
-                )
+def _progress(done: int, total: int) -> None:
+    if total < 1:
+        total = 1
+    print(f"Progress: {done}/{total}", end="\r", flush=True)
 
-    return entries
+
+def _entry_from_detail(detail: dict, option_code: str) -> dict:
+    family_code = detail.get("package_family", {}).get("package_family_code", "")
+    family_name = detail.get("package_family", {}).get("name", "")
+    variant_name = detail.get("package_detail_variant", {}).get("name", "")
+    option_name = detail.get("package_option", {}).get("name", "")
+    price = detail.get("package_option", {}).get("price", 0)
+
+    name_parts = [family_name, variant_name, option_name]
+    name = " - ".join([p for p in name_parts if p]).strip()
+
+    return {
+        "family_code": family_code,
+        "code": option_code,
+        "name": name,
+        "price": price,
+    }
+
+
+def _entry_from_option(family_code: str, family_name: str, variant_name: str, option: dict) -> dict:
+    option_code = option.get("package_option_code", "")
+    option_name = option.get("name", "")
+    price = option.get("price", 0)
+
+    name_parts = [family_name, variant_name, option_name]
+    name = " - ".join([p for p in name_parts if p]).strip()
+
+    return {
+        "family_code": family_code,
+        "code": option_code,
+        "name": name,
+        "price": price,
+    }
 
 
 def _print_table(rows: list[dict]) -> None:
@@ -176,33 +187,124 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
     print("SCAN FAMILY CODE AKTIF (STORE + PROVIDER)".center(width))
     print("=" * width)
     print("Sedang memindai data, mohon tunggu...")
+    print("Tekan 'q' + Enter untuk menghentikan scan dan tampilkan hasil sementara.")
+
+    stop_flag = {"stop": False}
+    _start_stop_listener(stop_flag)
 
     active_names = _get_active_package_names(api_key, tokens)
 
-    entries = []
-    entries.extend(_collect_from_store(api_key, tokens, subs_type, is_enterprise))
-    entries.extend(_collect_from_family_list(api_key, tokens, subs_type, is_enterprise))
+    cache = _load_cache()
+    cache_entries = cache.get("entries", {})
 
-    # Deduplicate by option code
-    dedup = {}
-    for e in entries:
-        code = e.get("code", "")
-        if not code:
+    entries = {}
+    done = 0
+    total = 0
+
+    store_res = get_store_packages(api_key, tokens, subs_type, is_enterprise)
+    store_items = []
+    if store_res:
+        store_items = store_res.get("data", {}).get("results_price_only", [])
+
+    total += len(store_items)
+
+    for item in store_items:
+        if stop_flag.get("stop"):
+            break
+        done += 1
+        _progress(done, total)
+
+        if item.get("action_type") != "PDP":
             continue
-        dedup[code] = e
+        option_code = item.get("action_param", "")
+        if not option_code:
+            continue
+        if option_code in entries:
+            continue
 
-    rows = list(dedup.values())
+        cached = cache_entries.get(option_code)
+        if cached:
+            entry = cached.copy()
+        else:
+            detail = get_package(api_key, tokens, option_code)
+            if not detail:
+                continue
+            entry = _entry_from_detail(detail, option_code)
+            cache_entries[option_code] = entry
 
-    # Best-effort filter: remove packages whose name matches active package names
+        entry["source"] = "store"
+        entries[option_code] = entry
+
+    if not stop_flag.get("stop"):
+        family_res = get_family_list(api_key, tokens, subs_type, is_enterprise)
+        families = []
+        if family_res:
+            families = family_res.get("data", {}).get("results", [])
+
+        for fam in families:
+            if stop_flag.get("stop"):
+                break
+
+            family_code = fam.get("id", "")
+            if not family_code:
+                continue
+
+            family_data = get_family(api_key, tokens, family_code, is_enterprise)
+            if not family_data:
+                continue
+
+            family_name = family_data.get("package_family", {}).get("name", "")
+            variants = family_data.get("package_variants", [])
+
+            options_count = sum(len(v.get("package_options", [])) for v in variants)
+            total += options_count
+
+            for variant in variants:
+                if stop_flag.get("stop"):
+                    break
+
+                variant_name = variant.get("name", "")
+                for option in variant.get("package_options", []):
+                    if stop_flag.get("stop"):
+                        break
+
+                    done += 1
+                    _progress(done, total)
+
+                    option_code = option.get("package_option_code", "")
+                    if not option_code:
+                        continue
+
+                    entry = _entry_from_option(family_code, family_name, variant_name, option)
+                    entry["source"] = "provider"
+
+                    entries[option_code] = entry
+                    cache_entries[option_code] = entry
+
+    print("")
+    _save_cache(cache)
+
+    rows = list(entries.values())
+
     if active_names:
         rows = [r for r in rows if _normalize_name(r.get("name", "")) not in active_names]
 
-    rows.sort(key=lambda r: (r.get("family_code", ""), r.get("name", "")))
+    rows.sort(
+        key=lambda r: (
+            0 if r.get("source") == "provider" else 1,
+            r.get("family_code", ""),
+            r.get("name", ""),
+        )
+    )
 
     clear_screen()
     print("=" * width)
     print("HASIL SCAN FAMILY CODE".center(width))
     print("=" * width)
+
+    if stop_flag.get("stop"):
+        print("Scan dihentikan. Menampilkan hasil sementara.")
+        print("")
 
     if not rows:
         print("Tidak ada data ditemukan.")
