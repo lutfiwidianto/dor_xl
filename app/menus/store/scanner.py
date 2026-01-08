@@ -484,12 +484,28 @@ def show_store_purchase_from_scan(subs_type: str = "PREPAID", is_enterprise: boo
 
     for idx, row in enumerate(rows, start=1):
         price = _format_price(row.get("price", ""))
-        line = (
-            f"{pad_right(str(idx), col_idx)}{sep}"
-            f"{pad_right(_truncate_to_width(row.get('name', ''), col_name), col_name)}{sep}"
-            f"{pad_right(_truncate_to_width(price, col_price), col_price)}"
-        )
-        print(line)
+        name = str(row.get("name", ""))
+        name_lines = []
+        # simple wrap by display width
+        current = ""
+        for ch in name:
+            if display_width(current + ch) > col_name:
+                name_lines.append(current)
+                current = ch
+            else:
+                current += ch
+        if current or not name_lines:
+            name_lines.append(current)
+
+        for i, piece in enumerate(name_lines):
+            left_no = str(idx) if i == 0 else ""
+            right_price = price if i == 0 else ""
+            line = (
+                f"{pad_right(left_no, col_idx)}{sep}"
+                f"{pad_right(piece, col_name)}{sep}"
+                f"{pad_right(_truncate_to_width(right_price, col_price), col_price)}"
+            )
+            print(line)
 
     choice = input("Detail no: ").strip()
     if choice == "00":
