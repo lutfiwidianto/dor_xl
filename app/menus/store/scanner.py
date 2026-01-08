@@ -433,11 +433,19 @@ def show_store_purchase_from_scan(subs_type: str = "PREPAID", is_enterprise: boo
     cache = _load_cache()
     cache_entries = cache.get("entries", {})
 
-    try:
-        added = _merge_provider_updates(cache_entries, api_key, tokens, subs_type, is_enterprise)
-    except Exception as e:
-        added = 0
-        print(f"Gagal update dari provider: {e}")
+    added = 0
+    if not cache_entries:
+        print("Cache kosong. Perlu update dari provider.")
+        do_update = True
+    else:
+        update_choice = input("Update dari provider? (y/n): ").strip().lower()
+        do_update = update_choice == "y"
+
+    if do_update:
+        try:
+            added = _merge_provider_updates(cache_entries, api_key, tokens, subs_type, is_enterprise)
+        except Exception as e:
+            print(f"Gagal update dari provider: {e}")
 
     _save_cache(cache)
 
@@ -459,10 +467,31 @@ def show_store_purchase_from_scan(subs_type: str = "PREPAID", is_enterprise: boo
     print("Pilih nomor paket untuk melihat detail & beli.")
     print("00 untuk kembali.")
 
-    for line in _build_table_lines(rows, with_index=True):
+    # Tabel ringkas: no | nama paket | harga
+    sep = " | "
+    name_vals = [str(r.get("name", "")) for r in rows]
+    col_idx = max(display_width("no"), len(str(len(rows))))
+    col_name = max([display_width("nama paket")] + [display_width(v) for v in name_vals])
+    col_price = max(display_width("harga"), 10)
+
+    header = (
+        f"{pad_right('no', col_idx)}{sep}"
+        f"{pad_right('nama paket', col_name)}{sep}"
+        f"{pad_right('harga', col_price)}"
+    )
+    print(header)
+    print("-" * min(get_terminal_width(), display_width(header)))
+
+    for idx, row in enumerate(rows, start=1):
+        price = _format_price(row.get("price", ""))
+        line = (
+            f"{pad_right(str(idx), col_idx)}{sep}"
+            f"{pad_right(_truncate_to_width(row.get('name', ''), col_name), col_name)}{sep}"
+            f"{pad_right(_truncate_to_width(price, col_price), col_price)}"
+        )
         print(line)
 
-    choice = input("Pilih nomor: ").strip()
+    choice = input("Detail no: ").strip()
     if choice == "00":
         return
 
