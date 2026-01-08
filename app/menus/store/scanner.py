@@ -8,10 +8,12 @@ from app.client.store.search import get_family_list, get_store_packages
 from app.client.engsel import get_family, get_package, send_api_request
 from app.menus.util import clear_screen, pause
 from app.menus.util_box import display_width, get_terminal_width, pad_right
+from app.menus.package import show_package_details
 from app.service.auth import AuthInstance
 
 CACHE_PATH = "scanner_cache.json"
 CACHE_VERSION = 1
+OUTPUT_PATH = "scan_results.txt"
 
 
 def _normalize_name(name: str) -> str:
@@ -35,6 +37,78 @@ def _format_price(price: int) -> str:
         return f"Rp {int(price):,}".replace(",", ".")
     except Exception:
         return str(price)
+
+
+def _price_value(price: int) -> int:
+    try:
+        return int(price)
+    except Exception:
+        return 0
+
+
+def _build_table_lines(rows: list[dict], *, with_index: bool = False) -> list[str]:
+    width = get_terminal_width()
+    avail = max(40, width)
+    sep = " | "
+    min_price = 10
+    min_name = 18
+
+    fc_vals = [str(r.get("family_code", "")) for r in rows]
+    code_vals = [str(r.get("code", "")) for r in rows]
+
+    col_idx = max(display_width("no"), 2) if with_index else 0
+    col_fc = max([display_width("family_code")] + [display_width(v) for v in fc_vals])
+    col_code = max([display_width("code")] + [display_width(v) for v in code_vals])
+    content_w = avail - (len(sep) * (4 if with_index else 3))
+    if with_index:
+        content_w -= col_idx
+    col_price = min_price
+    col_name = content_w - (col_fc + col_code + col_price)
+
+    if col_name < min_name:
+        col_name = min_name
+
+    header_parts = []
+    if with_index:
+        header_parts.append(pad_right("no", col_idx))
+    header_parts.extend(
+        [
+            pad_right("family_code", col_fc),
+            pad_right("code", col_code),
+            pad_right("nama paket", col_name),
+            pad_right("harga", col_price),
+        ]
+    )
+    header = sep.join(header_parts)
+
+    lines = [header, "-" * min(avail, display_width(header))]
+
+    for idx, row in enumerate(rows, start=1):
+        price = _format_price(row.get("price", ""))
+        row_parts = []
+        if with_index:
+            row_parts.append(pad_right(str(idx), col_idx))
+        row_parts.extend(
+            [
+                pad_right(_truncate_to_width(row.get("family_code", ""), col_fc), col_fc),
+                pad_right(_truncate_to_width(row.get("code", ""), col_code), col_code),
+                pad_right(_truncate_to_width(row.get("name", ""), col_name), col_name),
+                pad_right(_truncate_to_width(price, col_price), col_price),
+            ]
+        )
+        lines.append(sep.join(row_parts))
+
+    return lines
+
+
+def _write_output(rows: list[dict]) -> None:
+    try:
+        lines = _build_table_lines(rows)
+        with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+            for line in lines:
+                f.write(line + "\n")
+    except Exception:
+        pass
 
 
 def _get_active_package_names(api_key: str, tokens: dict) -> set[str]:
@@ -128,43 +202,60 @@ def _entry_from_option(family_code: str, family_name: str, variant_name: str, op
 
 
 def _print_table(rows: list[dict]) -> None:
-    width = get_terminal_width()
-    avail = max(40, width)
-    sep = " | "
-    min_price = 10
-    min_name = 18
-
-    fc_vals = [str(r.get("family_code", "")) for r in rows]
-    code_vals = [str(r.get("code", "")) for r in rows]
-
-    col_fc = max([display_width("family_code")] + [display_width(v) for v in fc_vals])
-    col_code = max([display_width("code")] + [display_width(v) for v in code_vals])
-    content_w = avail - (len(sep) * 3)
-    col_price = min_price
-    col_name = content_w - (col_fc + col_code + col_price)
-
-    if col_name < min_name:
-        col_name = min_name
-
-    header = (
-        f"{pad_right('family_code', col_fc)}{sep}"
-        f"{pad_right('code', col_code)}{sep}"
-        f"{pad_right('nama paket', col_name)}{sep}"
-        f"{pad_right('harga', col_price)}"
-    )
-
-    print(header)
-    print("-" * min(avail, display_width(header)))
-
-    for row in rows:
-        price = _format_price(row.get("price", ""))
-        line = (
-            f"{pad_right(_truncate_to_width(row['family_code'], col_fc), col_fc)}{sep}"
-            f"{pad_right(_truncate_to_width(row['code'], col_code), col_code)}{sep}"
-            f"{pad_right(_truncate_to_width(row['name'], col_name), col_name)}{sep}"
-            f"{pad_right(_truncate_to_width(price, col_price), col_price)}"
-        )
+    for line in _build_table_lines(rows):
         print(line)
+
+
+def _merge_provider_updates(
+    cache_entries: dict,
+    api_key: str,
+    tokens: dict,
+    subs_type: str,
+    is_enterprise: bool,
+) -> int:
+    added = 0
+    family_res = get_family_list(api_key, tokens, subs_type, is_enterprise)
+    families = []
+    if family_res:
+        families = family_res.get("data", {}).get("results", [])
+
+    for fam in families:
+        family_code = fam.get("id", "")
+        if not family_code:
+            continue
+
+        family_data = get_family(api_key, tokens, family_code, is_enterprise)
+        if not family_data:
+            continue
+
+        family_name = family_data.get("package_family", {}).get("name", "")
+        variants = family_data.get("package_variants", [])
+
+        for variant in variants:
+            variant_name = variant.get("name", "")
+            for option in variant.get("package_options", []):
+                option_code = option.get("package_option_code", "")
+                if not option_code:
+                    continue
+
+                entry = _entry_from_option(family_code, family_name, variant_name, option)
+                entry["source"] = "provider"
+
+                cached = cache_entries.get(option_code)
+                if not cached:
+                    cache_entries[option_code] = entry
+                    added += 1
+                    continue
+
+                if (
+                    cached.get("price") != entry.get("price")
+                    or cached.get("name") != entry.get("name")
+                    or cached.get("family_code") != entry.get("family_code")
+                ):
+                    cache_entries[option_code] = entry
+                    added += 1
+
+    return added
 
 
 def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: bool = False) -> None:
@@ -186,6 +277,7 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
     stop_flag = {"stop": False}
     _start_stop_listener(stop_flag)
 
+    error_msg = None
     active_names = _get_active_package_names(api_key, tokens)
 
     cache = _load_cache()
@@ -195,7 +287,11 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
     done = 0
     total = 0
 
-    store_res = get_store_packages(api_key, tokens, subs_type, is_enterprise)
+    try:
+        store_res = get_store_packages(api_key, tokens, subs_type, is_enterprise)
+    except Exception as e:
+        store_res = None
+        error_msg = str(e)
     store_items = []
     if store_res:
         store_items = store_res.get("data", {}).get("results_price_only", [])
@@ -220,7 +316,11 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
         if cached:
             entry = cached.copy()
         else:
-            detail = get_package(api_key, tokens, option_code)
+            try:
+                detail = get_package(api_key, tokens, option_code)
+            except Exception as e:
+                error_msg = str(e)
+                break
             if not detail:
                 continue
             entry = _entry_from_detail(detail, option_code)
@@ -230,7 +330,11 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
         entries[option_code] = entry
 
     if not stop_flag.get("stop"):
-        family_res = get_family_list(api_key, tokens, subs_type, is_enterprise)
+        try:
+            family_res = get_family_list(api_key, tokens, subs_type, is_enterprise)
+        except Exception as e:
+            family_res = None
+            error_msg = str(e)
         families = []
         if family_res:
             families = family_res.get("data", {}).get("results", [])
@@ -243,7 +347,11 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
             if not family_code:
                 continue
 
-            family_data = get_family(api_key, tokens, family_code, is_enterprise)
+            try:
+                family_data = get_family(api_key, tokens, family_code, is_enterprise)
+            except Exception as e:
+                error_msg = str(e)
+                break
             if not family_data:
                 continue
 
@@ -299,6 +407,9 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
     if stop_flag.get("stop"):
         print("Scan dihentikan. Menampilkan hasil sementara.")
         print("")
+    elif error_msg:
+        print(f"Scan terhenti karena error: {error_msg}")
+        print("")
 
     if not rows:
         print("Tidak ada data ditemukan.")
@@ -306,4 +417,71 @@ def show_active_family_code_scanner(subs_type: str = "PREPAID", is_enterprise: b
         return
 
     _print_table(rows)
+    _write_output(rows)
+    print(f"Hasil disimpan ke {OUTPUT_PATH}")
     pause()
+
+
+def show_store_purchase_from_scan(subs_type: str = "PREPAID", is_enterprise: bool = False) -> None:
+    api_key = AuthInstance.api_key
+    tokens = AuthInstance.get_active_tokens()
+    if not tokens:
+        print("Token tidak ditemukan.")
+        pause()
+        return
+
+    cache = _load_cache()
+    cache_entries = cache.get("entries", {})
+
+    try:
+        added = _merge_provider_updates(cache_entries, api_key, tokens, subs_type, is_enterprise)
+    except Exception as e:
+        added = 0
+        print(f"Gagal update dari provider: {e}")
+
+    _save_cache(cache)
+
+    rows = list(cache_entries.values())
+    if not rows:
+        print("Cache kosong. Jalankan scan terlebih dahulu.")
+        pause()
+        return
+
+    rows.sort(key=lambda r: (_price_value(r.get("price", 0)), r.get("name", "")))
+
+    clear_screen()
+    width = get_terminal_width()
+    print("=" * width)
+    print("BELI PAKET STORE DARI HASIL SCAN".center(width))
+    print("=" * width)
+    if added > 0:
+        print(f"Update provider: {added} item ditambahkan/diperbarui.")
+    print("Pilih nomor paket untuk melihat detail & beli.")
+    print("00 untuk kembali.")
+
+    for line in _build_table_lines(rows, with_index=True):
+        print(line)
+
+    choice = input("Pilih nomor: ").strip()
+    if choice == "00":
+        return
+
+    if not choice.isdigit():
+        print("Input tidak valid.")
+        pause()
+        return
+
+    idx = int(choice)
+    if idx < 1 or idx > len(rows):
+        print("Nomor paket tidak ditemukan.")
+        pause()
+        return
+
+    selected = rows[idx - 1]
+    option_code = selected.get("code", "")
+    if not option_code:
+        print("Option code tidak ditemukan.")
+        pause()
+        return
+
+    show_package_details(api_key, tokens, option_code, is_enterprise)
