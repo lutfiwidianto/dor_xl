@@ -58,6 +58,7 @@ try:
     from app.menus.store.segments import show_store_segments_menu
     from app.menus.store.search import show_family_list_menu, show_store_packages_menu
     from app.menus.store.redemables import show_redeemables_menu
+    from app.menus.store.scanner import show_active_family_code_scanner
     from app.client.registration import dukcapil
     from app.menus.sharing import show_balance_allotment_menu
 except ImportError as e:
@@ -106,6 +107,7 @@ def show_main_menu(profile):
         ("9", "Family Plan / Akrab"), ("10", "Circle Info"),
         ("11", "Store Segments"), ("12", "Store Family List"),
         ("13", "Store Packages"), ("14", "Redeemables"),
+        ("15", "Scan Family Code Aktif"),
         ("BA", "Balance Allotment"), ("R", "Register (Dukcapil)"),
         ("N", "Notifikasi"), ("V", "Validate MSISDN"),
         ("00", "Bookmark Paket"), ("99", "Tutup Aplikasi")
@@ -183,6 +185,8 @@ def main():
                 show_store_packages_menu(profile['subscription_type'], False)
             elif choice == "14":
                 show_redeemables_menu(False)
+            elif choice == "15":
+                show_active_family_code_scanner(profile['subscription_type'], False)
             elif choice == "ba":
                 show_balance_allotment_menu()
             elif choice == "r":
