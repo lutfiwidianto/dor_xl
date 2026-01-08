@@ -131,26 +131,20 @@ def _print_table(rows: list[dict]) -> None:
     width = get_terminal_width()
     avail = max(40, width)
     sep = " | "
-    min_fc = 10
-    min_code = 12
     min_price = 10
     min_name = 18
 
+    fc_vals = [str(r.get("family_code", "")) for r in rows]
+    code_vals = [str(r.get("code", "")) for r in rows]
+
+    col_fc = max([display_width("family_code")] + [display_width(v) for v in fc_vals])
+    col_code = max([display_width("code")] + [display_width(v) for v in code_vals])
     content_w = avail - (len(sep) * 3)
-    col_fc = min_fc
-    col_code = min_code
     col_price = min_price
     col_name = content_w - (col_fc + col_code + col_price)
 
     if col_name < min_name:
-        shortage = min_name - col_name
-        shrink_fc = min(col_fc - 6, shortage // 2) if col_fc > 6 else 0
-        shrink_code = min(col_code - 8, shortage - shrink_fc) if col_code > 8 else 0
-        col_fc -= shrink_fc
-        col_code -= shrink_code
-        col_name = content_w - (col_fc + col_code + col_price)
-        if col_name < 8:
-            col_name = 8
+        col_name = min_name
 
     header = (
         f"{pad_right('family_code', col_fc)}{sep}"
