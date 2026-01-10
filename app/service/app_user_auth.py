@@ -15,6 +15,7 @@ class AppUserAuth:
     def __init__(self):
         self._config = self._load_config()
         self._auth = None
+        self._profile = None
 
     def _load_config(self) -> dict:
         config = {}
@@ -122,6 +123,18 @@ class AppUserAuth:
             "expiresAt": int(time.time()) + max(60, expires_in - 60),
         }
 
+    def _parse_auth_error(self, resp) -> str:
+        try:
+            data = resp.json()
+        except Exception:
+            return f"HTTP {resp.status_code}"
+        code = (
+            data.get("error", {}).get("message")
+            or data.get("error", {}).get("errors", [{}])[0].get("message")
+            or ""
+        )
+        return code or f"HTTP {resp.status_code}"
+
     def _request(self, method: str, path: str, payload: dict | None, auth: dict):
         url = f"{self._db_url().rstrip('/')}/{path}.json"
         params = {"auth": auth["idToken"]}
@@ -173,9 +186,31 @@ class AppUserAuth:
         if not normalized:
             return False, "Username tidak valid. Gunakan 4-20 karakter: a-z, 0-9, titik, underscore."
         email = self._email_for_username(normalized)
-        signed_in = self._sign_in(email, password)
+        api_key = self._api_key()
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
+        payload = {"email": email, "password": password, "returnSecureToken": True}
+        resp = requests.post(url, json=payload, timeout=15)
+        if resp.status_code != 200:
+            return False, f"Login gagal: {self._parse_auth_error(resp)}"
+        data = resp.json()
+        expires_in = int(data.get("expiresIn", "3600"))
+        signed_in = {
+            "idToken": data.get("idToken"),
+            "refreshToken": data.get("refreshToken"),
+            "localId": data.get("localId"),
+            "email": email,
+            "expiresAt": int(time.time()) + max(60, expires_in - 60),
+        }
         if not signed_in:
             return False, "Login gagal. Username atau password salah."
+        profile = self._get_profile(signed_in)
+        if not profile:
+            self.logout()
+            return False, "Akun tidak ditemukan. Hubungi admin."
+        status = str(profile.get("status", "active")).lower()
+        if status != "active":
+            self.logout()
+            return False, "Akun diblokir. Hubungi admin."
         self._save_auth(signed_in)
         self._auth = signed_in
         try:
@@ -187,6 +222,7 @@ class AppUserAuth:
             )
         except Exception:
             pass
+        self._profile = profile
         return True, ""
 
     def register(
@@ -197,7 +233,21 @@ class AppUserAuth:
         if not normalized:
             return False, "Username tidak valid. Gunakan 4-20 karakter: a-z, 0-9, titik, underscore."
         email = self._email_for_username(normalized)
-        signed_up = self._sign_up(email, password)
+        api_key = self._api_key()
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={api_key}"
+        payload = {"email": email, "password": password, "returnSecureToken": True}
+        resp = requests.post(url, json=payload, timeout=15)
+        if resp.status_code != 200:
+            return False, f"Registrasi gagal: {self._parse_auth_error(resp)}"
+        data = resp.json()
+        expires_in = int(data.get("expiresIn", "3600"))
+        signed_up = {
+            "idToken": data.get("idToken"),
+            "refreshToken": data.get("refreshToken"),
+            "localId": data.get("localId"),
+            "email": email,
+            "expiresAt": int(time.time()) + max(60, expires_in - 60),
+        }
         if not signed_up:
             return False, "Registrasi gagal. Username mungkin sudah dipakai."
         profile = {
@@ -206,6 +256,8 @@ class AppUserAuth:
             "whatsapp_number": phone.strip(),
             "telegram_username": telegram_username.strip().lstrip("@").lower(),
             "telegram_verified": True,
+            "status": "active",
+            "role": "user",
             "created_at": int(time.time()),
             "last_login_at": int(time.time()),
         }
@@ -215,6 +267,7 @@ class AppUserAuth:
             return False, f"Gagal menyimpan profil: {exc}"
         self._save_auth(signed_up)
         self._auth = signed_up
+        self._profile = profile
         return True, ""
 
     def logout(self) -> None:
@@ -225,6 +278,59 @@ class AppUserAuth:
             except Exception:
                 pass
         self._auth = None
+        self._profile = None
+
+    def _get_profile(self, auth: dict) -> dict | None:
+        try:
+            profile = self._request("GET", f"app_users/{auth['localId']}", None, auth)
+        except Exception:
+            return None
+        return profile if isinstance(profile, dict) else None
+
+    def get_profile(self) -> dict | None:
+        auth = self.get_auth()
+        if not auth:
+            return None
+        if self._profile:
+            return self._profile
+        self._profile = self._get_profile(auth)
+        return self._profile
+
+    def is_admin(self) -> bool:
+        profile = self.get_profile()
+        if not profile:
+            return False
+        return str(profile.get("role", "")).lower() == "admin"
+
+    def list_users(self) -> list[dict]:
+        auth = self.get_auth()
+        if not auth:
+            raise RuntimeError("Not logged in.")
+        data = self._request("GET", "app_users", None, auth)
+        if not isinstance(data, dict):
+            return []
+        users = []
+        for uid, info in data.items():
+            if not isinstance(info, dict):
+                continue
+            users.append(
+                {
+                    "uid": uid,
+                    "username": info.get("username", ""),
+                    "name": info.get("name", ""),
+                    "whatsapp_number": info.get("whatsapp_number", ""),
+                    "status": info.get("status", "active"),
+                    "role": info.get("role", "user"),
+                }
+            )
+        return users
+
+    def set_user_status(self, uid: str, status: str) -> None:
+        auth = self.get_auth()
+        if not auth:
+            raise RuntimeError("Not logged in.")
+        payload = {"status": status}
+        self._request("PATCH", f"app_users/{uid}", payload, auth)
 
 
 AppUserAuthInstance = AppUserAuth()
