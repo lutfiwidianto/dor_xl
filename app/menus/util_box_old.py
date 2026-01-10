@@ -75,7 +75,7 @@ def _char_width_fallback(ch: str) -> int:
     if code == 0x200D:
         return 0
 
-    # âœ… Zero Width Space / Word Joiner -> 0  (INI YANG KURANG)
+    # ✅ Zero Width Space / Word Joiner -> 0  (INI YANG KURANG)
     if code in (0x200B, 0x2060):
         return 0
 
@@ -360,38 +360,21 @@ def print_paged(
 # =========================
 # Convenience T&C wrapper
 # =========================
-def wrap_bullets(
-    text: str,
-    width: int,
-    *,
-    bullet: str = "• ",
-    bullet_color: str = D,
-) -> List[str]:
-    content_width = max(20, width - 6)
-    out: List[str] = []
-    prev_was_item = False
-    bullet_re = re.compile(r"^[-*•\u2022\u2023\u25E6\u2043\u2219]\s+")
-    list_re = re.compile(r"^(?:\d+[\).\]]|[a-zA-Z][\).\]]|[-*•\u2022\u2023\u25E6\u2043\u2219])\s+")
-    for raw in str(text).splitlines():
-        t = raw.strip()
-        if not t:
-            prev_was_item = False
-            continue
-
-        is_item = bool(list_re.match(t))
-        if bullet_re.match(t):
-            t = bullet_re.sub("", t)
-
-        wrapped = textwrap.wrap(t, width=content_width - 2) or [""]
-        for i, piece in enumerate(wrapped):
-            if is_item:
-                prefix = bullet if i == 0 else "  "
-                out.append(f"{bullet_color}{prefix}{piece}{RESET}")
-            else:
-                prefix = "  " if prev_was_item else ""
-                if prefix:
-                    out.append(f"{bullet_color}{prefix}{piece}{RESET}")
-                else:
-                    out.append(f"{piece}")
-        prev_was_item = is_item or prev_was_item
+def wrap_bullets(
+    text: str,
+    width: int,
+    *,
+    bullet: str = "• ",
+    bullet_color: str = D,
+) -> List[str]:
+    content_width = max(20, width - 6)
+    out: List[str] = []
+    for raw in str(text).splitlines():
+        t = raw.strip()
+        if not t:
+            continue
+        wrapped = textwrap.wrap(t, width=content_width - 2) or [""]
+        for i, piece in enumerate(wrapped):
+            prefix = bullet if i == 0 else "  "
+            out.append(f"{bullet_color}{prefix}{piece}{RESET}")
     return out

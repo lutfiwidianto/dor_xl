@@ -1,4 +1,5 @@
 import sys
+from getpass import getpass
 
 from app.menus.util import clear_screen, pause
 from app.menus.util_box import get_terminal_width
@@ -43,10 +44,13 @@ def _print_ascii_card(title: str, lines: list[str], *, width: int) -> None:
     print(f"+{'-' * inner}+")
 
 
-def _input_full_box(prompt: str, *, width: int) -> str:
+def _input_full_box(prompt: str, *, width: int, hide: bool = False) -> str:
     inner = width - 2
     print(f"\n+{'-' * inner}+")
-    value = input(f" > {prompt} ").strip()
+    if hide:
+        value = getpass(f" > {prompt} ").strip()
+    else:
+        value = input(f" > {prompt} ").strip()
     print(f"+{'-' * inner}+")
     return value
 
@@ -70,7 +74,7 @@ def show_app_auth_menu() -> bool:
             return False
         if choice == "1":
             username = _input_full_box("Username Login Dor:", width=width).strip()
-            password = _input_full_box("Password Login Dor:", width=width).strip()
+            password = _input_full_box("Password Login Dor:", width=width, hide=True).strip()
             try:
                 ok, err = AppUserAuthInstance.login(username, password)
             except Exception as exc:
@@ -173,8 +177,8 @@ def show_app_auth_menu() -> bool:
 
             while True:
                 username = _input_full_box("Username Login Dor:", width=width).strip()
-                password = _input_full_box("Password Login Dor:", width=width).strip()
-                confirm = _input_full_box("Konfirmasi Password:", width=width).strip()
+                password = _input_full_box("Password Login Dor:", width=width, hide=True).strip()
+                confirm = _input_full_box("Konfirmasi Password:", width=width, hide=True).strip()
                 if password != confirm:
                     _print_ascii_card("Info", ["Password tidak sama."], width=width)
                     continue
