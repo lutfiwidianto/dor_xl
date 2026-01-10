@@ -1,8 +1,8 @@
-# Decoy package management
+﻿# Decoy package management
 import time
 
 import requests
-from app.client.engsel import get_package_details
+from app.client.myxl_api import get_package_details
 from app.service.auth import AuthInstance
 
 class DecoyPackage:

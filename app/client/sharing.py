@@ -1,10 +1,10 @@
-import uuid
+﻿import uuid
 import requests
 import json
 
 from datetime import datetime, timezone
 
-from app.client.engsel import BASE_API_URL, UA
+from app.client.myxl_api import BASE_API_URL, UA
 from app.client.encrypt import (
     API_KEY,
     java_like_timestamp,

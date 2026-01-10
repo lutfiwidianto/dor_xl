@@ -1,4 +1,4 @@
-import json
+﻿import json
 from app.client.store.segments import get_segments
 from app.menus.util import clear_screen, pause
 from app.service.auth import AuthInstance

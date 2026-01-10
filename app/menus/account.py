@@ -1,4 +1,4 @@
-from app.client.ciam import get_otp, submit_otp
+﻿from app.client.ciam import get_otp, submit_otp
 from app.menus.util import clear_screen, pause
 from app.menus.util_box import (
     print_header,

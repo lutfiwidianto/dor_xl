@@ -1,8 +1,8 @@
-import json
+﻿import json
 
 from app.service.auth import AuthInstance
 from app.menus.util import pause, clear_screen
-from app.client.engsel import get_balance
+from app.client.myxl_api import get_balance
 from app.client.sharing import balance_allotment
 from app.client.ciam import get_auth_code
 

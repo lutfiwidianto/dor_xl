@@ -1,4 +1,4 @@
-import time
+﻿import time
 
 from app.service.auth import AuthInstance
 from app.service.firebase_store import FirebaseStore
