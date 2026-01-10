@@ -189,7 +189,9 @@ class AppUserAuth:
             pass
         return True, ""
 
-    def register(self, name: str, phone: str, username: str, password: str) -> tuple[bool, str]:
+    def register(
+        self, name: str, phone: str, username: str, password: str, telegram_username: str
+    ) -> tuple[bool, str]:
         self._ensure_config()
         normalized = self._normalize_username(username)
         if not normalized:
@@ -201,7 +203,9 @@ class AppUserAuth:
         profile = {
             "username": normalized,
             "name": name.strip(),
-            "phone": phone.strip(),
+            "whatsapp_number": phone.strip(),
+            "telegram_username": telegram_username.strip().lstrip("@").lower(),
+            "telegram_verified": True,
             "created_at": int(time.time()),
             "last_login_at": int(time.time()),
         }

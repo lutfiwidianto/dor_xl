@@ -4,8 +4,8 @@
 
 CLI client for a certain Indonesian mobile internet service provider.
 
-# How to get API Key
-Chat telegram bot [@fykxt_bot](https://t.me/fykxt_bot) with message `/viewkey`. Copy the API key.
+# API Key
+Set your API key in `api.key` (one line) or enter it when prompted on first run.
 
 # Quick Start (Termux)
 1. Update & install dependencies
@@ -26,6 +26,14 @@ bash install.sh
 ```
 dor
 ```
+
+# Telegram OTP Setup
+App registration uses Telegram OTP. Create a bot and set env vars before running:
+```
+export DORXL_TG_BOT_TOKEN="123456:ABCDEF"
+export DORXL_TG_BOT_USERNAME="your_bot_username"
+```
+User must open the bot in Telegram and send `/start` first.
 
 # Quick Start (Windows)
 1. Clone this repo
@@ -55,6 +63,13 @@ dor
 
 ## Attribution
 This project is a derivative of an existing CLI client (me-cli). I only modify and extend it; I am not the original author.
+
+## Dependencies (Network)
+This app connects only to these services:
+- XL/MyXL official APIs
+- Firebase (Auth + Database)
+- Telegram Bot API (OTP)
+- GitHub (update only if you use the update menu)
 
 ## PS for Certain Indonesian mobile internet service provider
 
