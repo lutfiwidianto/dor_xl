@@ -46,12 +46,6 @@ class Auth:
             self.api_key = ensure_api_key()
             self.store = FirebaseStore(auth_provider=AppUserAuthInstance.get_auth)
             try:
-                self.store.migrate_legacy_tokens()
-            except Exception:
-                # Config Firebase bisa belum diisi saat startup pertama
-                pass
-            
-            try:
                 self.load_tokens()
                 # Select active user from file if available
                 self.load_active_number()
