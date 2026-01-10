@@ -1,4 +1,4 @@
-# MYnyak Engsel (Modified by Lutfi Widianto)
+# DOR_XL (Forked/Modified Project)
 
 ![banner](bnr.png)
 
@@ -36,6 +36,9 @@ python main.py
 
 # Info
 
+## Attribution
+This project is a derivative of an existing CLI client (me-cli). I only modify and extend it; I am not the original author.
+
 ## PS for Certain Indonesian mobile internet service provider
 
 Instead of just delisting the package from the app, ensure the user cannot purchase it.
@@ -44,7 +47,7 @@ What's the point of strong client side security when the server don't enforce it
 ## Terms of Service
 By using this tool, the user agrees to comply with all applicable laws and regulations and to release the developer from any and all claims arising from its use.
 
-## Contact
+## Original Contact
 
 contact@mashu.lol
 # Proyek dor_xl
