@@ -3,12 +3,19 @@ from app.menus.util_box import (
     print_header,
     print_card,
     print_menu_box,
-    input_box,
     get_terminal_width,
     C,
     G,
     Y,
     R,
+    W,
+    B,
+    RESET,
+    TL,
+    TR,
+    BL,
+    BR,
+    H,
 )
 from app.service.app_user_auth import AppUserAuthInstance
 from app.service.telegram_otp import TelegramOTPInstance
@@ -21,6 +28,14 @@ def _validate_phone(phone: str) -> bool:
 def _title_case_name(name: str) -> str:
     parts = [p for p in name.strip().split() if p]
     return " ".join(p[:1].upper() + p[1:].lower() for p in parts)
+
+
+def _input_full_box(prompt: str, *, width: int) -> str:
+    inner = width - 2
+    print(f"\n{W}{TL}{H * inner}{TR}{RESET}")
+    value = input(f" {B}{C}> {W}{prompt}{RESET} ").strip()
+    print(f"{W}{BL}{H * inner}{BR}{RESET}")
+    return value
 
 
 def show_app_auth_menu() -> bool:
@@ -38,13 +53,13 @@ def show_app_auth_menu() -> bool:
             width=width,
             color=C,
         )
-        choice = input_box("Pilihan:", width=width).strip().lower()
+        choice = _input_full_box("Pilihan:", width=width).strip().lower()
 
         if choice == "99":
             return False
         if choice == "1":
-            username = input_box("Username:", width=width).strip()
-            password = input_box("Password:", width=width).strip()
+            username = _input_full_box("Username:", width=width).strip()
+            password = _input_full_box("Password:", width=width).strip()
             try:
                 ok, err = AppUserAuthInstance.login(username, password)
             except Exception as exc:
@@ -59,12 +74,15 @@ def show_app_auth_menu() -> bool:
             pause()
             return True
         if choice == "2":
-            name = input_box("Nama:", width=width).strip()
-            phone = input_box("Nomor WhatsApp (628...):", width=width).strip()
-            tg_username = input_box("Telegram Username (@...):", width=width).strip()
-            username = input_box("Username:", width=width).strip()
-            password = input_box("Password:", width=width).strip()
-            confirm = input_box("Konfirmasi Password:", width=width).strip()
+            name = _input_full_box("Nama:", width=width).strip()
+            phone = _input_full_box("Nomor WhatsApp (628...):", width=width).strip()
+            tg_username = _input_full_box(
+                "Telegram Username (@contoh @username):",
+                width=width,
+            ).strip()
+            username = _input_full_box("Username:", width=width).strip()
+            password = _input_full_box("Password:", width=width).strip()
+            confirm = _input_full_box("Konfirmasi Password:", width=width).strip()
 
             if not name:
                 print_card(["Nama wajib diisi."], "Info", width=width, color=Y)
@@ -79,7 +97,10 @@ def show_app_auth_menu() -> bool:
                 )
                 pause()
                 continue
-            if not tg_username.strip():
+            if "t.me/" in tg_username:
+                tg_username = tg_username.split("t.me/")[-1]
+            tg_username = tg_username.strip().lstrip("@")
+            if not tg_username:
                 print_card(["Telegram username wajib diisi."], "Info", width=width, color=Y)
                 pause()
                 continue
@@ -95,7 +116,7 @@ def show_app_auth_menu() -> bool:
                 print_card([f"Gagal kirim OTP Telegram: {exc}"], "Error", width=width, color=R)
                 pause()
                 continue
-            otp = input_box("Masukkan OTP Telegram:", width=width).strip()
+            otp = _input_full_box("Masukkan OTP Telegram:", width=width).strip()
             if not TelegramOTPInstance.verify_otp(tg_username, otp):
                 print_card(["OTP Telegram salah/expired."], "Gagal", width=width, color=R)
                 pause()
