@@ -1,0 +1,43 @@
+D O R   X L
+                    â€¢ â€¢ â€¢ â€¢ â€¢
+
+API key loaded successfully.
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/dor_xl/main.py", line 68, in <module>
+    from app.menus.app_auth import show_app_auth_menu
+  File "/data/data/com.termux/files/home/dor_xl/app/menus/app_auth.py", line 2
+    ﻿from app.menus.util import clear_screen, pause
+    ^
+SyntaxError: invalid non-printable character U+FEFF
+~/dor_xl $ python main.py
+
+
+                         D O R   X L
+                    â€¢ â€¢ â€¢ â€¢ â€¢
+
+API key loaded successfully.
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/dor_xl/main.py", line 68, in <module>
+    from app.menus.app_auth import show_app_auth_menu
+  File "/data/data/com.termux/files/home/dor_xl/app/menus/app_auth.py", line 2
+    ﻿from app.menus.util import clear_screen, pause
+    ^
+SyntaxError: invalid non-printable character U+FEFF
+~/dor_xl $ cd ~/dor_xl
+
+    p.write_text(data.decode("utf-8-sig"), encoding="utf-8")
+    print("BOM removed:", p)
+else:
+    print("No BOM:", p)
+PY~/dor_xl $ python - <<'PY'
+> from pathlib import Path
+> p = Path("app/menus/app_auth.py")
+> data = p.read_bytes()
+> if data.startswith(b"\xef\xbb\xbf"):
+>     p.write_text(data.decode("utf-8-sig"), encoding="utf-8")
+>     print("BOM removed:", p)
+> else:
+>     print("No BOM:", p)
+> PY
+No BOM: app/menus/app_auth.py
+~/dor_xl $
