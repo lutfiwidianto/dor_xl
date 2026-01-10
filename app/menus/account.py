@@ -17,7 +17,7 @@ from app.service.auth import AuthInstance
 def show_login_menu():
     clear_screen()
     width = get_terminal_width()
-    print_header("Login ke MyXL", width)
+    print_header("Login Akun XL (MyXL)", width)
     print_menu_box(
         "Menu",
         [
@@ -33,10 +33,10 @@ def show_login_menu():
 def login_prompt(api_key: str):
     clear_screen()
     width = get_terminal_width()
-    print_header("Login ke MyXL", width)
+    print_header("Login Akun XL (MyXL)", width)
     print_card(
-        ["Masukkan nomor XL (Contoh 6281234567890)"],
-        "Nomor XL",
+        ["Masukkan nomor XL yang akan digunakan untuk transaksi."],
+        "Nomor XL (MyXL)",
         width=width,
         color=C,
     )
@@ -55,7 +55,7 @@ def login_prompt(api_key: str):
         subscriber_id = get_otp(phone_number)
         if not subscriber_id:
             return None
-        print_card(["OTP berhasil dikirim ke nomor Anda."], "OTP Terkirim", width=width, color=G)
+        print_card(["OTP XL berhasil dikirim ke nomor Anda."], "OTP XL Terkirim", width=width, color=G)
 
         try_count = 5
         while try_count > 0:

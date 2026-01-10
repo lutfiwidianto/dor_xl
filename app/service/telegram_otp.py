@@ -39,6 +39,17 @@ class TelegramOTP:
             raise RuntimeError(
                 "Telegram bot token missing. Set telegram_bot_token in firebase.config.json."
             )
+<<<<<<< HEAD
+=======
+
+    def bot_username(self) -> str:
+        return self._bot_username or ""
+
+    def bot_link(self) -> str:
+        if self._bot_username:
+            return f"https://t.me/{self._bot_username}"
+        return "https://t.me"
+>>>>>>> e5b31fbea10b3024584b4db308a75752ea9d2854
 
     def _api_url(self, method: str) -> str:
         return f"https://api.telegram.org/bot{self._bot_token}/{method}"

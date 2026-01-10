@@ -5,6 +5,12 @@ import shutil
 import json
 from datetime import datetime
 
+if os.name == "nt":
+    try:
+        os.system("chcp 65001 >nul")
+    except Exception:
+        pass
+
 # =========================================================================
 # 1. LOGIKA PEMULIHAN DARURAT & AUTO UPDATE
 # =========================================================================
@@ -34,6 +40,7 @@ def emergency_repair():
 # =========================================================================
 try:
     from dotenv import load_dotenv
+    load_dotenv()
     from app.menus.util import clear_screen, pause
     from app.menus import banner 
     from app.client.myxl_api import get_balance, get_tiering_info
@@ -59,16 +66,15 @@ try:
     from app.menus.sharing import show_balance_allotment_menu
     from app.service.app_user_auth import AppUserAuthInstance
     from app.menus.app_auth import show_app_auth_menu
+    from app.menus.admin import show_admin_menu
 except ImportError as e:
     print(f"âŒ Error saat memuat modul: {e}")
     emergency_repair()
 
-load_dotenv()
-
 # =========================================================================
 # 3. FUNGSI TAMPILAN MENU
 # =========================================================================
-def show_main_menu(profile):
+def show_main_menu(profile, *, is_admin: bool = False):
     try:
         columns, _ = os.get_terminal_size()
         WIDTH = columns - 2
@@ -113,6 +119,8 @@ def show_main_menu(profile):
         ("N", "Notifikasi"), ("V", "Validate MSISDN"),
         ("00", "Bookmark Paket"), ("F", "Sync Data (Admin)"), ("U", "Update Aplikasi (Git Pull)"), ("99", "Tutup Aplikasi")
     ]
+    if is_admin:
+        menus.append(("A", "Admin User"))
 
     for code, label in menus:
         color = Y if code.isdigit() else G
@@ -163,7 +171,8 @@ def main():
                 "point_info": point_info
             }
 
-            show_main_menu(profile)
+            is_admin = AppUserAuthInstance.is_admin()
+            show_main_menu(profile, is_admin=is_admin)
             choice = input().lower()
 
             # --- EKSEKUSI PILIHAN MENU ---
@@ -219,6 +228,8 @@ def main():
                 show_bookmark_menu()
             elif choice == "f":
                 show_firebase_menu()
+            elif choice == "a" and AppUserAuthInstance.is_admin():
+                show_admin_menu()
             elif choice == "u":
                 try:
                     from app.service.git import auto_update
