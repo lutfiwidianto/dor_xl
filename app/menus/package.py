@@ -54,7 +54,14 @@ def format_duration(validity):
     return f"{v} hari"
 
 
-def show_package_details(api_key, tokens, package_option_code, is_enterprise, option_order=-1):
+def show_package_details(
+    api_key,
+    tokens,
+    package_option_code,
+    is_enterprise,
+    option_order=-1,
+    auto_choice=None,
+):
     """Show package details in card layout"""
     active_user = AuthInstance.active_user
     width = get_terminal_width()
@@ -168,6 +175,7 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
         print_paged(tnc_lines, "📜 SYARAT & KETENTUAN", width=width, color=M, page_size=12)
 
     # Menu
+    auto_mode = auto_choice is not None
     while True:
         options_grid = [
             f"{C}[{W}1{C}] {W}Pulsa{RESET}",
@@ -190,9 +198,11 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
 
         options_grid.append(f"{C}[{R}00{C}] {W}Kembali{RESET}")
 
-        print_menu_box("🚀 PILIHAN PEMBELIAN", options_grid, width=width, color=C)
-
-        choice = input_box("Pilihan:", width=width).lower()
+        if not auto_mode:
+            print_menu_box("🚀 PILIHAN PEMBELIAN", options_grid, width=width, color=C)
+            choice = input_box("Pilihan:", width=width).lower()
+        else:
+            choice = str(auto_choice).lower()
 
         if choice == "00":
             return False
@@ -217,11 +227,15 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
             result = settlement_balance(api_key, tokens, payment_items, payment_for, True)
             if result and result.get("status") == "SUCCESS":
                 print_card(f"{G}✓ Pembelian berhasil!{RESET}", "✅ BERHASIL", width=width, color=G)
-            else:
-                error_msg = result.get("message", "Unknown error") if result else "Gagal memproses"
-                print_card(f"{R}✗ {error_msg}{RESET}", "❌ GAGAL", width=width, color=R)
+                input(f"\n{W}Tekan Enter untuk kembali...{RESET}")
+                return True
+
+            error_msg = result.get("message", "Unknown error") if result else "Gagal memproses"
+            print_card(f"{R}✗ {error_msg}{RESET}", "❌ GAGAL", width=width, color=R)
             input(f"\n{W}Tekan Enter untuk kembali...{RESET}")
-            return True
+            if auto_mode:
+                return True
+            continue
 
         elif choice == "2":
             show_multipayment(api_key, tokens, payment_items, payment_for, True)
@@ -478,6 +492,8 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
                 pause_on_success=False,
                 token_confirmation_idx=1,
             )
+            if auto_mode:
+                return True
 
         elif choice.lower() == "b":
             settlement_bounty(
@@ -520,6 +536,8 @@ def show_package_details(api_key, tokens, package_option_code, is_enterprise, op
 
         else:
             print_card(f"{R}Pilihan tidak valid!{RESET}", "⚠ PERINGATAN", width=width // 2, color=R)
+            if auto_mode:
+                return False
             pause()
 
 
@@ -601,14 +619,51 @@ def get_packages_by_family(family_code: str, is_enterprise: bool | None = None, 
 
         nav_options = [
             f"{C}[{W}No{C}]{RESET} {W}Pilih paket dengan nomor{RESET}",
+            f"{C}[{W}A{C}]{RESET} {W}Beli semua paket (metode sama){RESET}",
             f"{C}[{R}00{C}]{RESET} {W}Kembali ke menu utama{RESET}",
         ]
         print_menu_box("📋 MENU NAVIGASI", nav_options, width=width, color=C)
 
-        pkg_choice = input_box(f"Pilih paket (1-{option_number-1}) atau 00:", width=width)
+        pkg_choice = input_box(f"Pilih paket (1-{option_number-1}), A, atau 00:", width=width)
 
         if pkg_choice == "00":
             return None
+
+        if pkg_choice.lower() == "a":
+            if not packages:
+                print_card(f"{Y}Tidak ada paket untuk dibeli.{RESET}", "ℹ INFO", width=width, color=Y)
+                pause()
+                continue
+
+            method_options = [
+                f"{C}[{W}1{C}] {W}Pulsa{RESET}",
+                f"{C}[{W}2{C}] {W}E-Wallet{RESET}",
+                f"{C}[{W}3{C}] {W}QRIS{RESET}",
+                f"{C}[{W}4{C}] {W}Pulsa + Decoy{RESET}",
+                f"{C}[{W}5{C}] {W}Decoy V2{RESET}",
+                f"{C}[{W}6{C}] {W}QRIS + Decoy{RESET}",
+                f"{C}[{W}7{C}] {W}QRIS Decoy V2{RESET}",
+                f"{C}[{R}00{C}] {W}Batal{RESET}",
+            ]
+            print_menu_box("🚀 PILIH METODE", method_options, width=width, color=C)
+            method_choice = input_box("Metode:", width=width).strip().lower()
+            if method_choice == "00":
+                continue
+            if method_choice not in {"1", "2", "3", "4", "5", "6", "7"}:
+                print_card(f"{R}Metode tidak valid!{RESET}", "⚠ PERINGATAN", width=width // 2, color=R)
+                pause()
+                continue
+
+            for pkg in packages:
+                show_package_details(
+                    api_key,
+                    tokens,
+                    pkg["code"],
+                    is_enterprise,
+                    option_order=pkg["option_order"],
+                    auto_choice=method_choice,
+                )
+            continue
 
         if not pkg_choice.isdigit():
             print_card(f"{R}Masukkan nomor yang valid!{RESET}", "⚠ PERINGATAN", width=width // 2, color=R)

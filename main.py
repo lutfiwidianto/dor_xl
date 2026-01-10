@@ -27,13 +27,7 @@ def emergency_repair():
         print("Saran: Pastikan Git terinstal dan jalankan 'git clone' ulang.")
         sys.exit(1)
 
-# Mencoba memanggil fungsi update dari file terpisah (app/service/git.py)
-try:
-    from app.service.git import auto_update
-    auto_update()
-except (ImportError, ModuleNotFoundError):
-    # Jika file git.py tidak ditemukan, langsung lari ke pemulihan
-    emergency_repair()
+# Auto update dipindahkan ke menu utama (manual).
 
 # =========================================================================
 # 2. IMPORT MODUL INTERNAL (SETELAH DIPASTIKAN FILE LENGKAP)
@@ -114,7 +108,7 @@ def show_main_menu(profile):
         ("16", "Beli Paket Store (Hasil Scan)"),
         ("BA", "Balance Allotment"), ("R", "Register (Dukcapil)"),
         ("N", "Notifikasi"), ("V", "Validate MSISDN"),
-        ("00", "Bookmark Paket"), ("99", "Tutup Aplikasi")
+        ("00", "Bookmark Paket"), ("U", "Update Aplikasi"), ("99", "Tutup Aplikasi")
     ]
 
     for code, label in menus:
@@ -207,6 +201,14 @@ def main():
                 print(json.dumps(res, indent=2)); pause()
             elif choice == "00":
                 show_bookmark_menu()
+            elif choice == "u":
+                try:
+                    from app.service.git import auto_update
+                    auto_update()
+                    pause()
+                except Exception as e:
+                    print(f"Gagal update aplikasi: {e}")
+                    pause()
             elif choice == "s":
                 enter_sentry_mode()
             elif choice == "99":

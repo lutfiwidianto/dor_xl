@@ -1,9 +1,8 @@
-import os
-import json
 import time
 from app.client.ciam import get_new_token
 from app.client.engsel import get_profile
 from app.util import ensure_api_key
+from app.service.local_db import LocalDB
 
 class Auth:
     _instance_ = None
@@ -44,13 +43,9 @@ class Auth:
     def __init__(self):
         if not self._initialized_:
             self.api_key = ensure_api_key()
+            self.store = LocalDB()
             
-            if os.path.exists("refresh-tokens.json"):
-                self.load_tokens()
-            else:
-                # Create empty file
-                with open("refresh-tokens.json", "w", encoding="utf-8") as f:
-                    json.dump([], f, indent=4)
+            self.load_tokens()
 
             # Select active user from file if available
             self.load_active_number()
@@ -59,18 +54,15 @@ class Auth:
             self._initialized_ = True
             
     def load_tokens(self):
-        with open("refresh-tokens.json", "r", encoding="utf-8") as f:
-            refresh_tokens = json.load(f)
-            
-            if len(refresh_tokens) !=  0:
-                self.refresh_tokens = []
-
-            # Validate and load tokens
-            for rt in refresh_tokens:
-                if "number" in rt and "refresh_token" in rt:
-                    self.refresh_tokens.append(rt)
-                else:
-                    print(f"Invalid token entry: {rt}")
+        refresh_tokens = self.store.get_refresh_tokens()
+        if len(refresh_tokens) != 0:
+            self.refresh_tokens = []
+        # Validate and load tokens
+        for rt in refresh_tokens:
+            if "number" in rt and "refresh_token" in rt:
+                self.refresh_tokens.append(rt)
+            else:
+                print(f"Invalid token entry: {rt}")
 
     def add_refresh_token(self, number: int, refresh_token: str):
         # Check if number already exist, if yes, replace it, if not append
@@ -90,7 +82,7 @@ class Auth:
                 "refresh_token": refresh_token
             })
         
-        # Save to file
+        # Save to local DB
         self.write_tokens_to_file()
 
         # Set active user to newly added
@@ -99,9 +91,9 @@ class Auth:
     def remove_refresh_token(self, number: int):
         self.refresh_tokens = [rt for rt in self.refresh_tokens if rt["number"] != number]
         
-        # Save to file
-        with open("refresh-tokens.json", "w", encoding="utf-8") as f:
-            json.dump(self.refresh_tokens, f, indent=4)
+        # Save to local DB
+        self.write_tokens_to_file()
+        self.store.delete_user(number)
         
         # If the removed user was the active user, select a new active user if available
         if self.active_user and self.active_user["number"] == number:
@@ -147,6 +139,12 @@ class Auth:
         # Update refresh token. The real client app do this, not sure why cz refresh token should still be valid
         rt_entry["refresh_token"] = tokens["refresh_token"]
         self.write_tokens_to_file()
+        self.store.update_tokens(
+            number,
+            refresh_token=tokens["refresh_token"],
+            access_token=tokens["access_token"],
+            id_token=tokens["id_token"],
+        )
         
         self.last_refresh_time = int(time.time())
         
@@ -192,23 +190,18 @@ class Auth:
         return active_user["tokens"] if active_user else None
     
     def write_tokens_to_file(self):
-        with open("refresh-tokens.json", "w", encoding="utf-8") as f:
-            json.dump(self.refresh_tokens, f, indent=4)
+        self.store.replace_refresh_tokens(self.refresh_tokens)
     
     def write_active_number(self):
         if self.active_user:
-            with open("active.number", "w", encoding="utf-8") as f:
-                f.write(str(self.active_user["number"]))
+            self.store.set_active_number(self.active_user["number"])
         else:
-            if os.path.exists("active.number"):
-                os.remove("active.number")
+            self.store.set_active_number("")
     
     def load_active_number(self):
-        if os.path.exists("active.number"):
-            with open("active.number", "r", encoding="utf-8") as f:
-                number_str = f.read().strip()
-                if number_str.isdigit():
-                    number = int(number_str)
-                    self.set_active_user(number)
+        number_str = self.store.get_active_number()
+        if number_str and str(number_str).isdigit():
+            number = int(number_str)
+            self.set_active_user(number)
 
 AuthInstance = Auth()

@@ -7,6 +7,7 @@ import requests
 from app.client.encrypt import API_KEY, build_encrypted_field, decrypt_xdata, encryptsign_xdata, get_x_signature_payment, java_like_timestamp
 from app.client.engsel import BASE_API_URL, UA, intercept_page, send_api_request
 from app.type_dict import PaymentItem
+from app.service.transaction_logger import log_transaction
 
 def settlement_balance(
     api_key: str,
@@ -68,6 +69,7 @@ def settlement_balance(
     if payment_res["status"] != "SUCCESS":
         print("Failed to fetch payment methods.")
         print(f"Error: {payment_res}")
+        log_transaction("BALANCE", items, amount_int, payment_res)
         return payment_res
     
     token_payment = payment_res["data"]["token_payment"]
@@ -189,11 +191,14 @@ def settlement_balance(
         if decrypted_body["status"] != "SUCCESS":
             print("Failed to initiate settlement.")
             print(f"Error: {decrypted_body}")
+            log_transaction("BALANCE", items, amount_int, decrypted_body)
             return decrypted_body
         
         print(f"Purchase result:\n{json.dumps(decrypted_body, indent=2)}")
+        log_transaction("BALANCE", items, amount_int, decrypted_body)
         
         return decrypted_body
     except Exception as e:
         print("[decrypt err]", e)
+        log_transaction("BALANCE", items, amount_int, resp.text)
         return resp.text

@@ -9,6 +9,7 @@ import requests
 from app.client.engsel import *
 from app.client.encrypt import API_KEY, decrypt_xdata, encryptsign_xdata, java_like_timestamp, get_x_signature_payment
 from app.type_dict import PaymentItem
+from app.service.transaction_logger import log_transaction
 
 def settlement_qris(
     api_key: str,
@@ -71,6 +72,7 @@ def settlement_qris(
     if payment_res["status"] != "SUCCESS":
         print("Failed to fetch payment methods.")
         print(f"Error: {payment_res}")
+        log_transaction("QRIS", items, amount_int, payment_res)
         return None
     
     token_payment = payment_res["data"]["token_payment"]
@@ -177,13 +179,22 @@ def settlement_qris(
         if decrypted_body["status"] != "SUCCESS":
             print("Failed to initiate settlement.")
             print(f"Error: {decrypted_body}")
+            log_transaction("QRIS", items, amount_int, decrypted_body)
             return None
         
         transaction_id = decrypted_body["data"]["transaction_code"]
+        log_transaction(
+            "QRIS",
+            items,
+            amount_int,
+            decrypted_body,
+            status_override="PENDING",
+        )
         
         return transaction_id
     except Exception as e:
         print("[decrypt err]", e)
+        log_transaction("QRIS", items, amount_int, resp.text)
         return resp.text
 
 def get_qris_code(

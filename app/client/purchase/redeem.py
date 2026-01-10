@@ -16,6 +16,7 @@ from app.client.encrypt import (
     get_x_signature_bounty,
     get_x_signature_bounty_allotment,
 )
+from app.service.transaction_logger import log_simple_transaction
 
 BASE_API_URL = os.getenv("BASE_API_URL")
 AX_FP = os.getenv("AX_FP")
@@ -149,13 +150,34 @@ def settlement_bounty(
         if decrypted_body["status"] != "SUCCESS":
             print("Failed to claim bounty.")
             print(f"Error: {decrypted_body}")
+            log_simple_transaction(
+                "REDEEM_VOUCHER",
+                payment_target,
+                item_name,
+                price,
+                decrypted_body,
+            )
             return None
         
         print(decrypted_body)
+        log_simple_transaction(
+            "REDEEM_VOUCHER",
+            payment_target,
+            item_name,
+            price,
+            decrypted_body,
+        )
         
         return decrypted_body
     except Exception as e:
         print("[decrypt err]", e)
+        log_simple_transaction(
+            "REDEEM_VOUCHER",
+            payment_target,
+            item_name,
+            price,
+            resp.text,
+        )
         return resp.text
 
 def settlement_loyalty(
@@ -226,13 +248,34 @@ def settlement_loyalty(
         if decrypted_body["status"] != "SUCCESS":
             print("Failed purchase.")
             print(f"Error: {decrypted_body}")
+            log_simple_transaction(
+                "LOYALTY",
+                payment_target,
+                "",
+                price,
+                decrypted_body,
+            )
             return None
         
         print(decrypted_body)
+        log_simple_transaction(
+            "LOYALTY",
+            payment_target,
+            "",
+            price,
+            decrypted_body,
+        )
         
         return decrypted_body
     except Exception as e:
         print("[decrypt err]", e)
+        log_simple_transaction(
+            "LOYALTY",
+            payment_target,
+            "",
+            price,
+            resp.text,
+        )
         return resp.text
 
 def bounty_allotment(
@@ -303,11 +346,32 @@ def bounty_allotment(
         if decrypted_body["status"] != "SUCCESS":
             print("Failed to claim bounty.")
             print(f"Error: {decrypted_body}")
+            log_simple_transaction(
+                "BONUS_ALLOTMENT",
+                item_code,
+                item_name,
+                0,
+                decrypted_body,
+            )
             return None
         
         print(decrypted_body)
+        log_simple_transaction(
+            "BONUS_ALLOTMENT",
+            item_code,
+            item_name,
+            0,
+            decrypted_body,
+        )
         
         return decrypted_body
     except Exception as e:
         print("[decrypt err]", e)
+        log_simple_transaction(
+            "BONUS_ALLOTMENT",
+            item_code,
+            item_name,
+            0,
+            resp.text,
+        )
         return resp.text

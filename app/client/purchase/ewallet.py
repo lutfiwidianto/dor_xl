@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from app.client.engsel import BASE_API_URL, UA, intercept_page, send_api_request
 from app.client.encrypt import API_KEY, decrypt_xdata, encryptsign_xdata, java_like_timestamp, get_x_signature_payment
 from app.type_dict import PaymentItem
+from app.service.transaction_logger import log_transaction
 
 def settlement_multipayment(
     api_key: str,
@@ -70,6 +71,7 @@ def settlement_multipayment(
     if payment_res["status"] != "SUCCESS":
         print("Failed to fetch payment methods.")
         print(f"Error: {payment_res}")
+        log_transaction(payment_method, items, amount_int, payment_res)
         return None
     
     token_payment = payment_res["data"]["token_payment"]
@@ -159,9 +161,11 @@ def settlement_multipayment(
     
     try:
         decrypted_body = decrypt_xdata(api_key, json.loads(resp.text))
+        log_transaction(payment_method, items, amount_int, decrypted_body)
         return decrypted_body
     except Exception as e:
         print("[decrypt err]", e)
+        log_transaction(payment_method, items, amount_int, resp.text)
         return resp.text
 
 def show_multipayment(
