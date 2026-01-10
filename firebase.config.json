@@ -1,0 +1,6 @@
+{
+  "database_url": "https://dor-xl-sync-default-rtdb.firebaseio.com/",
+  "api_key": "AIzaSyBcMiROB7BSjaYT6cUXJ18gElz4XgEzCxs",
+  "telegram_bot_token": "8513001337:AAGlZ8ore44zcGUCMbulYEt6XEFvgBZaxA0",
+  "telegram_bot_username": "dorxl_assist_bot"
+}

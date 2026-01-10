@@ -1,0 +1,15 @@
+{
+  "database_url": "https://dor-xl-sync-default-rtdb.firebaseio.com/",
+  "api_key": "AIzaSyBcMiROB7BSjaYT6cUXJ18gElz4XgEzCxs",
+  "telegram_bot_token": "8513001337:AAGlZ8ore44zcGUCMbulYEt6XEFvgBZaxA0",
+  "telegram_bot_username": "dorxl_assist_bot",
+  "xl_api_key": "fd064969-7622-49ab-8373-11bc5d0fc5b5",
+  "x_api_key": "vT8tINqHaOxXbGE7eOWAhA==",
+  "aes_key_ascii": "5dccbf08920a5527",
+  "ax_fp_key": "",
+  "base_api_url": "https://api.myxl.xlaxiata.co.id",
+  "base_ciam_url": "https://gede.ciam.xlaxiata.co.id",
+  "basic_auth": "OWZjOTdlZDEtNmEzMC00OGQ1LTk1MTYtNjBjNTNjZTNhMTM1OllEV21GNExKajlYSUt3UW56eTJlMmxiMHRKUWIyOW8z",
+  "user_agent": "myXL / 8.9.0(1202); com.android.vending; (samsung; SM-N935F; SDK 33; Android 13)",
+  "ax_fp": "18b4d589826af50241177961590e6693"
+}
