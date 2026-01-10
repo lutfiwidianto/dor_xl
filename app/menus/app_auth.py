@@ -1,8 +1,23 @@
+<<<<<<< HEAD
+﻿from app.menus.util import clear_screen, pause
+from app.menus.util_box import (
+    print_header,
+    print_card,
+    print_menu_box,
+    input_box,
+    get_terminal_width,
+    C,
+    G,
+    Y,
+    R,
+)
+=======
 import sys
 from getpass import getpass
 
 from app.menus.util import clear_screen, pause
 from app.menus.util_box import get_terminal_width
+>>>>>>> e5b31fbea10b3024584b4db308a75752ea9d2854
 from app.service.app_user_auth import AppUserAuthInstance
 from app.service.telegram_otp import TelegramOTPInstance
 
