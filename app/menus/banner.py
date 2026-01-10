@@ -1,4 +1,4 @@
-import hashlib as _h, zlib as _z, urllib.request as _u
+﻿import hashlib as _h, zlib as _z, urllib.request as _u
 import re
 import os
 from ascii_magic import AsciiArt
@@ -53,7 +53,7 @@ def load(_Y: str, _Z: dict, width=None):
     # Judul Utama dengan spasi lebar agar elegan
     print(f"{WHITE}{'D O R   X L'}".center(width) + RESET)
     # Sub-text atau pemisah tipis menggunakan simbol titik (opsional)
-    print(f"{CYAN}{'• ' * 5}".center(width) + RESET)
+    print(f"{CYAN}{'â€¢ ' * 5}".center(width) + RESET)
     
     print("") # Margin bawah
 

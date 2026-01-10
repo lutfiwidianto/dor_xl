@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 
 # Load API key from text file named api.key

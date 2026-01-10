@@ -1,6 +1,6 @@
-import time
+﻿import time
 from app.client.ciam import get_new_token
-from app.client.engsel import get_profile
+from app.client.myxl_api import get_profile
 from app.util import ensure_api_key
 from app.service.firebase_store import FirebaseStore
 from app.service.app_user_auth import AppUserAuthInstance

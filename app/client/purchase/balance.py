@@ -1,11 +1,11 @@
-from datetime import timezone, datetime
+﻿from datetime import timezone, datetime
 import json
 import time
 import uuid
 
 import requests
 from app.client.encrypt import API_KEY, build_encrypted_field, decrypt_xdata, encryptsign_xdata, get_x_signature_payment, java_like_timestamp
-from app.client.engsel import BASE_API_URL, UA, intercept_page, send_api_request
+from app.client.myxl_api import BASE_API_URL, UA, intercept_page, send_api_request
 from app.type_dict import PaymentItem
 from app.service.transaction_logger import log_transaction
 

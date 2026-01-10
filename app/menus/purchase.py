@@ -1,6 +1,6 @@
-import requests, time
+﻿import requests, time
 from random import randint
-from app.client.engsel import get_family, get_package_details, get_package
+from app.client.myxl_api import get_family, get_package_details, get_package
 from app.menus.util import pause
 from app.service.auth import AuthInstance
 from app.service.decoy import DecoyInstance
@@ -149,7 +149,7 @@ def purchase_by_family(
                     api_key,
                     tokens,
                     payment_items,
-                    "🤑",
+                    "ðŸ¤‘",
                     False,
                     overwrite_amount=overwrite_amount,
                     token_confirmation_idx=1
@@ -353,7 +353,7 @@ def purchase_n_times(
                 api_key,
                 tokens,
                 payment_items,
-                "🤫",
+                "ðŸ¤«",
                 False,
                 overwrite_amount=overwrite_amount,
                 token_confirmation_idx=token_confirmation_idx
@@ -370,7 +370,7 @@ def purchase_n_times(
                         api_key,
                         tokens,
                         payment_items,
-                        "🤫",
+                        "ðŸ¤«",
                         False,
                         overwrite_amount=valid_amount,
                         token_confirmation_idx=token_confirmation_idx
@@ -518,7 +518,7 @@ def purchase_n_times_by_option_code(
                 api_key,
                 tokens,
                 payment_items,
-                "🤫",
+                "ðŸ¤«",
                 False,
                 overwrite_amount=overwrite_amount,
                 token_confirmation_idx=token_confirmation_idx
@@ -535,7 +535,7 @@ def purchase_n_times_by_option_code(
                         api_key,
                         tokens,
                         payment_items,
-                        "🤫",
+                        "ðŸ¤«",
                         False,
                         overwrite_amount=valid_amount,
                         token_confirmation_idx=token_confirmation_idx

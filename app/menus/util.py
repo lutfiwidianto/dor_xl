@@ -1,4 +1,4 @@
-import app.menus.banner as banner
+﻿import app.menus.banner as banner
 ascii_art = banner.load("https://me.mashu.lol/mebanner890.png", globals())
 
 from html.parser import HTMLParser

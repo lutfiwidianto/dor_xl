@@ -1,4 +1,4 @@
-import subprocess
+﻿import subprocess
 import sys
 import os
 import shutil
@@ -12,18 +12,18 @@ from datetime import datetime
 def emergency_repair():
     """Fungsi ini berjalan jika folder 'app' atau 'git.py' hilang."""
     print("\n" + "!"*50)
-    print("🚨 ERROR: SISTEM RUSAK ATAU FILE HILANG!")
+    print("ðŸš¨ ERROR: SISTEM RUSAK ATAU FILE HILANG!")
     print("Mencoba melakukan pemulihan otomatis dari GitHub...")
     print("!"*50 + "\n")
     try:
         # Memaksa git untuk menarik kembali semua file yang hilang
         subprocess.run(["git", "fetch", "origin", "main"], check=True, capture_output=True)
         subprocess.run(["git", "reset", "--hard", "origin/main"], check=True)
-        print("\n✅ Sistem berhasil dipulihkan! Menjalankan ulang aplikasi...")
+        print("\nâœ… Sistem berhasil dipulihkan! Menjalankan ulang aplikasi...")
         # Restart script
         os.execv(sys.executable, [sys.executable] + sys.argv)
     except Exception as e:
-        print(f"❌ Gagal memulihkan sistem secara otomatis: {e}")
+        print(f"âŒ Gagal memulihkan sistem secara otomatis: {e}")
         print("Saran: Pastikan Git terinstal dan jalankan 'git clone' ulang.")
         sys.exit(1)
 
@@ -36,7 +36,7 @@ try:
     from dotenv import load_dotenv
     from app.menus.util import clear_screen, pause
     from app.menus import banner 
-    from app.client.engsel import get_balance, get_tiering_info
+    from app.client.myxl_api import get_balance, get_tiering_info
     from app.client.famplan import validate_msisdn
     from app.menus.payment import show_transaction_history
     from app.service.auth import AuthInstance
@@ -60,7 +60,7 @@ try:
     from app.service.app_user_auth import AppUserAuthInstance
     from app.menus.app_auth import show_app_auth_menu
 except ImportError as e:
-    print(f"❌ Error saat memuat modul: {e}")
+    print(f"âŒ Error saat memuat modul: {e}")
     emergency_repair()
 
 load_dotenv()
@@ -89,19 +89,19 @@ def show_main_menu(profile):
     except:
         balance_fmt = profile['balance']
 
-    print(f"{C}" + "─" * WIDTH + f"{RESET}")
+    print(f"{C}" + "â”€" * WIDTH + f"{RESET}")
     number_str = str(profile.get("number", ""))
     masked = f"{'*' * max(len(number_str) - 3, 0)}{number_str[-3:]}" if number_str else ""
     print_line(f"Nomor  : {Y}{masked}{RESET} | Type : {M}{profile['subscription_type']}{RESET}")
     print_line(f"Pulsa  : {G}Rp {balance_fmt}{RESET} | Exp  : {R}{expired_at_dt}{RESET}")
     print_line(f"{profile['point_info']}")
-    print(f"{C}" + "─" * WIDTH + f"{RESET}")
+    print(f"{C}" + "â”€" * WIDTH + f"{RESET}")
     print(f"  {W}{B}MAIN MENU{RESET}")
-    print(f"{C}" + "─" * WIDTH + f"{RESET}")
+    print(f"{C}" + "â”€" * WIDTH + f"{RESET}")
 
     menus = [
         ("1", "Ganti Akun XL"), ("2", "Lihat Paket Saya"),
-        ("3", "Beli Paket 🔥 HOT 🔥"), ("4", "Beli Paket 🔥 HOT-2 🔥"),
+        ("3", "Beli Paket ðŸ”¥ HOT ðŸ”¥"), ("4", "Beli Paket ðŸ”¥ HOT-2 ðŸ”¥"),
         ("5", "Beli Paket (Option Code)"), ("6", "Beli Paket (Family Code)"),
         ("7", "Beli Paket Family (Loop)"), ("8", "Riwayat Transaksi"),
         ("9", "Family Plan / Akrab"), ("10", "Circle Info"),
@@ -119,7 +119,7 @@ def show_main_menu(profile):
         if code == "99": color = R
         print_line(f"[{color}{code:>2}{RESET}] {label}")
 
-    print(f"{C}" + "─" * WIDTH + f"{RESET}")
+    print(f"{C}" + "â”€" * WIDTH + f"{RESET}")
     print(f"{B} Pilih menu: {RESET}", end="")
 
 # =========================================================================
@@ -232,7 +232,7 @@ def main():
             elif choice == "99":
                 print("Terima kasih telah menggunakan aplikasi."); sys.exit(0)
             else:
-                print("❌ Pilihan tidak valid!"); pause()
+                print("âŒ Pilihan tidak valid!"); pause()
         else:
             # Jika belum login
             selected = show_account_menu()
@@ -242,6 +242,6 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n👋 Keluar dari aplikasi.")
+        print("\nðŸ‘‹ Keluar dari aplikasi.")
     except Exception as e:
-        print(f"❌ Terjadi kesalahan sistem: {e}")
+        print(f"âŒ Terjadi kesalahan sistem: {e}")

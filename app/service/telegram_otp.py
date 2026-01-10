@@ -1,20 +1,44 @@
+﻿import json
 import os
 import random
 import time
+from pathlib import Path
 from typing import Any
 
 import requests
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_CONFIG = BASE_DIR / "firebase.config.json"
+
 
 class TelegramOTP:
     def __init__(self):
-        self._bot_token = os.getenv("DORXL_TG_BOT_TOKEN", "").strip()
-        self._bot_username = os.getenv("DORXL_TG_BOT_USERNAME", "").strip().lstrip("@")
+        self._config = self._load_config()
+        self._bot_token = self._config.get("telegram_bot_token", "").strip()
+        self._bot_username = self._config.get("telegram_bot_username", "").strip().lstrip("@")
         self._pending: dict[str, dict[str, Any]] = {}
+
+    def _load_config(self) -> dict:
+        config = {}
+        env_token = os.getenv("DORXL_TG_BOT_TOKEN", "").strip()
+        env_username = os.getenv("DORXL_TG_BOT_USERNAME", "").strip()
+        if DEFAULT_CONFIG.exists():
+            try:
+                file_config = json.loads(DEFAULT_CONFIG.read_text(encoding="utf-8"))
+            except Exception:
+                file_config = {}
+            config = {**file_config, **config}
+        if env_token:
+            config["telegram_bot_token"] = env_token
+        if env_username:
+            config["telegram_bot_username"] = env_username
+        return config
 
     def _ensure_config(self):
         if not self._bot_token:
-            raise RuntimeError("Telegram bot token missing. Set DORXL_TG_BOT_TOKEN.")
+            raise RuntimeError(
+                "Telegram bot token missing. Set telegram_bot_token in firebase.config.json."
+            )
 
     def _api_url(self, method: str) -> str:
         return f"https://api.telegram.org/bot{self._bot_token}/{method}"

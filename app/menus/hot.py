@@ -1,6 +1,6 @@
-import requests
+﻿import requests
 
-from app.client.engsel import get_family, get_package_details
+from app.client.myxl_api import get_family, get_package_details
 from app.menus.package import show_package_details
 from app.service.auth import AuthInstance
 from app.menus.util import clear_screen, format_quota_byte, pause, display_html
@@ -19,7 +19,7 @@ def show_hot_menu():
     while in_bookmark_menu:
         clear_screen()
         print("=" * WIDTH)
-        print("🔥 Paket  Hot 🔥".center(WIDTH))
+        print("ðŸ”¥ Paket  Hot ðŸ”¥".center(WIDTH))
         print("=" * WIDTH)
         
         url = "https://me.mashu.lol/pg-hot.json"
@@ -83,7 +83,7 @@ def show_hot_menu2():
         clear_screen()
         main_package_detail = {}
         print("=" * WIDTH)
-        print("🔥 Paket  Hot 2 🔥".center(WIDTH))
+        print("ðŸ”¥ Paket  Hot 2 ðŸ”¥".center(WIDTH))
         print("=" * WIDTH)
         
         url = "https://me.mashu.lol/pg-hot2.json"

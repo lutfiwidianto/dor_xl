@@ -1,4 +1,4 @@
-# app/menus/util_box.py
+﻿# app/menus/util_box.py
 # Terminal UI helpers: border rapi (box drawing), card, menu box, paging, dll.
 
 from __future__ import annotations
@@ -32,10 +32,10 @@ except Exception:
 # =========================
 # Box Drawing Characters
 # =========================
-TL, TR = "┌", "┐"
-BL, BR = "└", "┘"
-H, V = "─", "│"
-LM, RM = "├", "┤"
+TL, TR = "â”Œ", "â”"
+BL, BR = "â””", "â”˜"
+H, V = "â”€", "â”‚"
+LM, RM = "â”œ", "â”¤"
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -75,7 +75,7 @@ def _char_width_fallback(ch: str) -> int:
     if code == 0x200D:
         return 0
 
-    # ✅ Zero Width Space / Word Joiner -> 0  (INI YANG KURANG)
+    # âœ… Zero Width Space / Word Joiner -> 0  (INI YANG KURANG)
     if code in (0x200B, 0x2060):
         return 0
 
@@ -319,7 +319,7 @@ def input_box(prompt: str, *, width: Optional[int] = None) -> str:
         width = get_terminal_width()
     w = max(16, min(width // 3, 30))
     print(f"\n{W}{TL}{H * (w - 2)}{TR}{RESET}")
-    value = input(f" {B}{C}›{W} {prompt}{RESET}").strip()
+    value = input(f" {B}{C}â€º{W} {prompt}{RESET}").strip()
     print(f"{W}{BL}{H * (w - 2)}{BR}{RESET}")
     return value
 
@@ -364,7 +364,7 @@ def wrap_bullets(
     text: str,
     width: int,
     *,
-    bullet: str = "• ",
+    bullet: str = "â€¢ ",
     bullet_color: str = D,
 ) -> List[str]:
     content_width = max(20, width - 6)

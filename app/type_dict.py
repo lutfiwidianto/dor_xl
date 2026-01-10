@@ -1,4 +1,4 @@
-from typing import TypedDict
+﻿from typing import TypedDict
 
 class PaymentItem(TypedDict):
     item_code: str

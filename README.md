@@ -28,11 +28,16 @@ dor
 ```
 
 # Telegram OTP Setup
-App registration uses Telegram OTP. Create a bot and set env vars before running:
+App registration uses Telegram OTP. Create a bot and set config (admin only).
+
+Add to `firebase.config.json`:
 ```
-export DORXL_TG_BOT_TOKEN="123456:ABCDEF"
-export DORXL_TG_BOT_USERNAME="your_bot_username"
+{
+  "telegram_bot_token": "123456:ABCDEF",
+  "telegram_bot_username": "your_bot_username"
+}
 ```
+
 User must open the bot in Telegram and send `/start` first.
 
 # Quick Start (Windows)

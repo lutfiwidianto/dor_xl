@@ -1,11 +1,11 @@
-import os
+﻿import os
 import json
 import uuid
 import requests
 
 from datetime import datetime, timezone
 
-from app.client.engsel import BASE_API_URL, UA
+from app.client.myxl_api import BASE_API_URL, UA
 from app.client.encrypt import (
     API_KEY,
     build_encrypted_field,

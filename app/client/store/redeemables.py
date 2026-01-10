@@ -1,4 +1,4 @@
-from app.client.engsel import send_api_request
+﻿from app.client.myxl_api import send_api_request
 
 def get_redeemables(
     api_key: str,
