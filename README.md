@@ -7,32 +7,49 @@ CLI client for a certain Indonesian mobile internet service provider.
 # How to get API Key
 Chat telegram bot [@fykxt_bot](https://t.me/fykxt_bot) with message `/viewkey`. Copy the API key.
 
-# How to run with TERMUX
-1. Update & Upgrade Termux
+# Quick Start (Termux)
+1. Update & install dependencies
 ```
 pkg update && pkg upgrade -y
+pkg install git python -y
 ```
-2. Install Git
+2. Clone this repo
 ```
-pkg install git -y
+git clone https://github.com/lutfiwidianto/dor_xl
+cd dor_xl
 ```
-3. Clone this repo
+3. Install & setup alias
 ```
-git clone https://github.com/purplemashu/me-cli
+bash install.sh
 ```
-4. Open the folder
+4. Run
 ```
-cd me-cli
+dor
 ```
-5. Setup
+
+# Quick Start (Windows)
+1. Clone this repo
 ```
-bash setup.sh
+git clone https://github.com/lutfiwidianto/dor_xl
+cd dor_xl
 ```
-6. Run the script
+2. Install & setup
 ```
-python main.py
+install.bat
 ```
-7. Input your API key when prompted
+3. Run
+```
+dor
+```
+4. Optional: use `dor` from any folder
+   - Add the project folder to PATH
+     - Press Win+R, type `sysdm.cpl`, press Enter
+     - Advanced tab -> Environment Variables
+     - Under "User variables", select "Path" -> Edit -> New
+     - Add: the full path to this folder (example: `C:\DOR_XL\online`)
+     - OK -> OK, then reopen your terminal
+   - Or create a global shortcut
+     - Copy `dor.cmd` to a folder already in PATH (example: `C:\Windows`)
 
 # Info
 
