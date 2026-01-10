@@ -44,7 +44,11 @@ class Auth:
         if not self._initialized_:
             self.api_key = ensure_api_key()
             self.store = FirebaseStore()
-            self.store.migrate_legacy_tokens()
+            try:
+                self.store.migrate_legacy_tokens()
+            except Exception:
+                # Config Firebase bisa belum diisi saat startup pertama
+                pass
             
             self.load_tokens()
 

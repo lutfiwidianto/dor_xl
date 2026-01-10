@@ -109,7 +109,7 @@ def show_main_menu(profile):
         ("16", "Beli Paket Store (Hasil Scan)"),
         ("BA", "Balance Allotment"), ("R", "Register (Dukcapil)"),
         ("N", "Notifikasi"), ("V", "Validate MSISDN"),
-        ("00", "Bookmark Paket"), ("F", "Firebase Login/Sync"), ("U", "Update Aplikasi (Git Pull)"), ("99", "Tutup Aplikasi")
+        ("00", "Bookmark Paket"), ("F", "Sync Data (Admin)"), ("U", "Update Aplikasi (Git Pull)"), ("99", "Tutup Aplikasi")
     ]
 
     for code, label in menus:

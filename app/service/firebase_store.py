@@ -8,6 +8,7 @@ import requests
 BASE_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = BASE_DIR / "firebase.config.json"
 DEFAULT_AUTH_FILE = BASE_DIR / "data" / "firebase_auth.json"
+DEFAULT_LOCAL_STORE = BASE_DIR / "data" / "local_store.json"
 
 
 class FirebaseStore:
@@ -63,9 +64,12 @@ class FirebaseStore:
     def _db_url(self) -> str:
         return self._config.get("database_url", "").strip().rstrip("/")
 
+    def _is_configured(self) -> bool:
+        return bool(self._api_key() and self._db_url())
+
     def _ensure_config(self):
-        if not self._api_key() or not self._db_url():
-            raise RuntimeError("Firebase config missing (database_url/api_key).")
+        if not self._is_configured():
+            raise RuntimeError("Firebase config missing (database_url/api_key). Set via firebase.config.json or env vars.")
 
     def _refresh_id_token(self, refresh_token: str) -> dict | None:
         api_key = self._api_key()
@@ -128,8 +132,11 @@ class FirebaseStore:
             "expiresAt": int(time.time()) + max(60, expires_in - 60),
         }
 
-    def _ensure_auth(self) -> dict:
-        self._ensure_config()
+    def _ensure_auth(self, prompt: bool = False) -> dict | None:
+        if not self._is_configured():
+            if prompt:
+                self._ensure_config()
+            return None
         if self._auth:
             if self._auth.get("expiresAt", 0) > int(time.time()):
                 return self._auth
@@ -143,7 +150,9 @@ class FirebaseStore:
                 self._save_auth({**auth, **refreshed})
                 self._auth = {**auth, **refreshed}
                 return self._auth
-        print("Firebase login diperlukan.")
+        if not prompt:
+            return None
+        print("Login Firebase diperlukan untuk sinkronisasi data (bukan login user).")
         email = input("Email Firebase: ").strip()
         password = input("Password Firebase: ").strip()
         signed_in = self._sign_in(email, password)
@@ -158,7 +167,9 @@ class FirebaseStore:
         return self._auth
 
     def _request(self, method: str, path: str, payload: dict | None = None):
-        auth = self._ensure_auth()
+        auth = self._ensure_auth(prompt=False)
+        if not auth:
+            raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
         url = f"{self._db_url().rstrip('/')}/{path}.json"
         params = {"auth": auth["idToken"]}
         resp = None
@@ -182,7 +193,9 @@ class FirebaseStore:
                 except Exception:
                     pass
             self._auth = None
-            auth = self._ensure_auth()
+            auth = self._ensure_auth(prompt=False)
+            if not auth:
+                raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
             params = {"auth": auth["idToken"]}
             if method == "GET":
                 resp = requests.get(url, params=params, timeout=15)
@@ -198,10 +211,36 @@ class FirebaseStore:
         return resp.json()
 
     def _user_path(self) -> str:
-        auth = self._ensure_auth()
+        auth = self._ensure_auth(prompt=False)
+        if not auth:
+            raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
         return f"users/{auth['localId']}"
 
+    def _local_read(self) -> dict:
+        if not DEFAULT_LOCAL_STORE.exists():
+            return {}
+        try:
+            return json.loads(DEFAULT_LOCAL_STORE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def _local_write(self, payload: dict) -> None:
+        DEFAULT_LOCAL_STORE.parent.mkdir(parents=True, exist_ok=True)
+        DEFAULT_LOCAL_STORE.write_text(
+            json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8"
+        )
+
+    def _use_local_store(self) -> bool:
+        if not self._is_configured():
+            return True
+        auth = self._ensure_auth(prompt=False)
+        return not bool(auth)
+
     def get_refresh_tokens(self) -> list[dict]:
+        if self._use_local_store():
+            data = self._local_read()
+            tokens = data.get("refresh_tokens", [])
+            return tokens if isinstance(tokens, list) else []
         data = self._request("GET", f"{self._user_path()}/refresh_tokens")
         if not data:
             return []
@@ -215,12 +254,26 @@ class FirebaseStore:
         return []
 
     def replace_refresh_tokens(self, refresh_tokens: list[dict]):
+        if self._use_local_store():
+            data = self._local_read()
+            data["refresh_tokens"] = refresh_tokens
+            self._local_write(data)
+            return
         self._request("PUT", f"{self._user_path()}/refresh_tokens", refresh_tokens)
 
     def set_active_number(self, number: int | str):
+        if self._use_local_store():
+            data = self._local_read()
+            data["active_number"] = str(number)
+            self._local_write(data)
+            return
         self._request("PUT", f"{self._user_path()}/active_number", str(number))
 
     def get_active_number(self) -> str | None:
+        if self._use_local_store():
+            data = self._local_read()
+            number = data.get("active_number")
+            return str(number) if number else None
         data = self._request("GET", f"{self._user_path()}/active_number")
         return data if data else None
 
@@ -232,7 +285,9 @@ class FirebaseStore:
             return False, str(exc)
 
     def ensure_login(self) -> bool:
-        self._ensure_auth()
+        auth = self._ensure_auth(prompt=True)
+        if not auth:
+            raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
         return True
 
     def set_api_key(self, api_key: str) -> None:

@@ -14,12 +14,12 @@ def show_firebase_menu():
 
     while True:
         options = [
-            f"{C}[{W}1{C}] {W}Login Firebase{RESET}",
+            f"{C}[{W}1{C}] {W}Login Firebase (Sync Admin){RESET}",
             f"{C}[{W}2{C}] {W}Test Sync (kirim data contoh){RESET}",
             f"{C}[{W}3{C}] {W}Set Firebase API Key{RESET}",
             f"{C}[{R}00{C}] {W}Kembali{RESET}",
         ]
-        print_menu_box("FIREBASE MENU", options, width=width, color=C)
+        print_menu_box("SYNC DATA (ADMIN)", options, width=width, color=C)
         choice = input_box("Pilihan:", width=width).strip().lower()
 
         if choice == "00":
@@ -27,7 +27,12 @@ def show_firebase_menu():
         if choice == "1":
             try:
                 store.ensure_login()
-                print_card(f"{G}Login Firebase berhasil.{RESET}", "INFO", width=width, color=G)
+                print_card(
+                    f"{G}Login Firebase berhasil (untuk sync data).{RESET}",
+                    "INFO",
+                    width=width,
+                    color=G,
+                )
             except Exception as exc:
                 print_card(f"{R}Gagal login: {exc}{RESET}", "ERROR", width=width, color=R)
             input(f"
