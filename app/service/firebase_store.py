@@ -12,8 +12,9 @@ DEFAULT_LOCAL_STORE = BASE_DIR / "data" / "local_store.json"
 
 
 class FirebaseStore:
-    def __init__(self):
+    def __init__(self, auth_provider=None):
         self._config = self._load_config()
+        self._auth_provider = auth_provider
         self._auth = None
 
     def _load_config(self) -> dict:
@@ -133,6 +134,11 @@ class FirebaseStore:
         }
 
     def _ensure_auth(self, prompt: bool = False) -> dict | None:
+        if self._auth_provider:
+            auth = self._auth_provider()
+            if auth:
+                self._auth = auth
+            return auth
         if not self._is_configured():
             if prompt:
                 self._ensure_config()
@@ -167,9 +173,10 @@ class FirebaseStore:
         return self._auth
 
     def _request(self, method: str, path: str, payload: dict | None = None):
+        self._ensure_config()
         auth = self._ensure_auth(prompt=False)
         if not auth:
-            raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
+            raise RuntimeError("Auth Firebase belum tersedia. Login aplikasi atau gunakan menu Sync.")
         url = f"{self._db_url().rstrip('/')}/{path}.json"
         params = {"auth": auth["idToken"]}
         resp = None
@@ -195,7 +202,7 @@ class FirebaseStore:
             self._auth = None
             auth = self._ensure_auth(prompt=False)
             if not auth:
-                raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
+                raise RuntimeError("Auth Firebase belum tersedia. Login aplikasi atau gunakan menu Sync.")
             params = {"auth": auth["idToken"]}
             if method == "GET":
                 resp = requests.get(url, params=params, timeout=15)
@@ -213,7 +220,7 @@ class FirebaseStore:
     def _user_path(self) -> str:
         auth = self._ensure_auth(prompt=False)
         if not auth:
-            raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
+            raise RuntimeError("Auth Firebase belum tersedia. Login aplikasi atau gunakan menu Sync.")
         return f"users/{auth['localId']}"
 
     def _local_read(self) -> dict:
@@ -231,10 +238,7 @@ class FirebaseStore:
         )
 
     def _use_local_store(self) -> bool:
-        if not self._is_configured():
-            return True
-        auth = self._ensure_auth(prompt=False)
-        return not bool(auth)
+        return os.getenv("DORXL_ALLOW_LOCAL_STORE", "").strip() == "1"
 
     def get_refresh_tokens(self) -> list[dict]:
         if self._use_local_store():
@@ -287,7 +291,7 @@ class FirebaseStore:
     def ensure_login(self) -> bool:
         auth = self._ensure_auth(prompt=True)
         if not auth:
-            raise RuntimeError("Firebase auth missing. Login via menu to enable sync.")
+            raise RuntimeError("Auth Firebase belum tersedia. Login aplikasi atau gunakan menu Sync.")
         return True
 
     def set_api_key(self, api_key: str) -> None:

@@ -57,6 +57,8 @@ try:
     from app.menus.store.scanner import show_store_purchase_from_scan
     from app.client.registration import dukcapil
     from app.menus.sharing import show_balance_allotment_menu
+    from app.service.app_user_auth import AppUserAuthInstance
+    from app.menus.app_auth import show_app_auth_menu
 except ImportError as e:
     print(f"❌ Error saat memuat modul: {e}")
     emergency_repair()
@@ -98,7 +100,7 @@ def show_main_menu(profile):
     print(f"{C}" + "─" * WIDTH + f"{RESET}")
 
     menus = [
-        ("1", "Login / Ganti Akun"), ("2", "Lihat Paket Saya"),
+        ("1", "Ganti Akun XL"), ("2", "Lihat Paket Saya"),
         ("3", "Beli Paket 🔥 HOT 🔥"), ("4", "Beli Paket 🔥 HOT-2 🔥"),
         ("5", "Beli Paket (Option Code)"), ("6", "Beli Paket (Family Code)"),
         ("7", "Beli Paket Family (Loop)"), ("8", "Riwayat Transaksi"),
@@ -125,6 +127,19 @@ def show_main_menu(profile):
 # =========================================================================
 def main():
     while True:
+        try:
+            logged_in = AppUserAuthInstance.is_logged_in()
+        except Exception as exc:
+            print(f"Konfigurasi Firebase belum lengkap: {exc}")
+            print("Silakan isi firebase.config.json atau env vars, lalu coba lagi.")
+            sys.exit(1)
+        if not logged_in:
+            ok = show_app_auth_menu()
+            if not ok:
+                print("Terima kasih telah menggunakan aplikasi.")
+                sys.exit(0)
+            AuthInstance.reload_after_login()
+
         active_user = AuthInstance.get_active_user()
         
         if active_user is not None:

@@ -2,6 +2,7 @@ import time
 
 from app.service.auth import AuthInstance
 from app.service.firebase_store import FirebaseStore
+from app.service.app_user_auth import AppUserAuthInstance
 
 
 def _mask_number(number: str) -> str:
@@ -73,7 +74,7 @@ def log_transaction(
         "user_number_masked": _mask_number(user_number),
     }
     try:
-        FirebaseStore().push_transaction(payload)
+        FirebaseStore(auth_provider=AppUserAuthInstance.get_auth).push_transaction(payload)
     except Exception:
         return
 

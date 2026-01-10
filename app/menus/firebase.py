@@ -35,8 +35,7 @@ def show_firebase_menu():
                 )
             except Exception as exc:
                 print_card(f"{R}Gagal login: {exc}{RESET}", "ERROR", width=width, color=R)
-            input(f"
-{W}Tekan Enter untuk kembali...{RESET}")
+            input(f"\n{W}Tekan Enter untuk kembali...{RESET}")
             continue
         if choice == "2":
             payload = {
@@ -55,22 +54,18 @@ def show_firebase_menu():
                 print_card(f"{G}Test sync berhasil terkirim.{RESET}", "INFO", width=width, color=G)
             else:
                 print_card(f"{R}Test sync gagal: {err}{RESET}", "ERROR", width=width, color=R)
-            input(f"
-{W}Tekan Enter untuk kembali...{RESET}")
+            input(f"\n{W}Tekan Enter untuk kembali...{RESET}")
             continue
         if choice == "3":
             api_key = input("Masukkan Firebase API Key: ").strip()
             if not api_key:
                 print_card(f"{Y}API key kosong.{RESET}", "INFO", width=width, color=Y)
-                input(f"
-{W}Tekan Enter untuk kembali...{RESET}")
+                input(f"\n{W}Tekan Enter untuk kembali...{RESET}")
                 continue
             store.set_api_key(api_key)
             print_card(f"{G}API key tersimpan.{RESET}", "INFO", width=width, color=G)
-            input(f"
-{W}Tekan Enter untuk kembali...{RESET}")
+            input(f"\n{W}Tekan Enter untuk kembali...{RESET}")
             continue
 
         print_card(f"{R}Pilihan tidak valid!{RESET}", "ERROR", width=width // 2, color=R)
-        input(f"
-{W}Tekan Enter untuk kembali...{RESET}")
+        input(f"\n{W}Tekan Enter untuk kembali...{RESET}")

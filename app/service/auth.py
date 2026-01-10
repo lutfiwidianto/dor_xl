@@ -3,6 +3,7 @@ from app.client.ciam import get_new_token
 from app.client.engsel import get_profile
 from app.util import ensure_api_key
 from app.service.firebase_store import FirebaseStore
+from app.service.app_user_auth import AppUserAuthInstance
 
 class Auth:
     _instance_ = None
@@ -43,23 +44,30 @@ class Auth:
     def __init__(self):
         if not self._initialized_:
             self.api_key = ensure_api_key()
-            self.store = FirebaseStore()
+            self.store = FirebaseStore(auth_provider=AppUserAuthInstance.get_auth)
             try:
                 self.store.migrate_legacy_tokens()
             except Exception:
                 # Config Firebase bisa belum diisi saat startup pertama
                 pass
             
-            self.load_tokens()
-
-            # Select active user from file if available
-            self.load_active_number()
+            try:
+                self.load_tokens()
+                # Select active user from file if available
+                self.load_active_number()
+            except Exception:
+                # App user login bisa belum dilakukan saat startup
+                pass
             self.last_refresh_time = int(time.time())
 
             self._initialized_ = True
             
     def load_tokens(self):
-        refresh_tokens = self.store.get_refresh_tokens()
+        try:
+            refresh_tokens = self.store.get_refresh_tokens()
+        except Exception:
+            self.refresh_tokens = []
+            return
         if len(refresh_tokens) != 0:
             self.refresh_tokens = []
         # Validate and load tokens
@@ -188,18 +196,34 @@ class Auth:
         return active_user["tokens"] if active_user else None
     
     def write_tokens_to_file(self):
-        self.store.replace_refresh_tokens(self.refresh_tokens)
+        try:
+            self.store.replace_refresh_tokens(self.refresh_tokens)
+        except Exception:
+            return
     
     def write_active_number(self):
         if self.active_user:
-            self.store.set_active_number(self.active_user["number"])
+            try:
+                self.store.set_active_number(self.active_user["number"])
+            except Exception:
+                return
         else:
-            self.store.set_active_number("")
+            try:
+                self.store.set_active_number("")
+            except Exception:
+                return
     
     def load_active_number(self):
-        number_str = self.store.get_active_number()
+        try:
+            number_str = self.store.get_active_number()
+        except Exception:
+            return
         if number_str and str(number_str).isdigit():
             number = int(number_str)
             self.set_active_user(number)
+
+    def reload_after_login(self):
+        self.load_tokens()
+        self.load_active_number()
 
 AuthInstance = Auth()
