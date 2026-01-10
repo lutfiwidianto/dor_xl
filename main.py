@@ -49,6 +49,7 @@ try:
     from app.menus.famplan import show_family_info
     from app.menus.circle import show_circle_info
     from app.menus.notification import show_notification_menu
+    from app.menus.firebase import show_firebase_menu
     from app.menus.store.segments import show_store_segments_menu
     from app.menus.store.search import show_family_list_menu, show_store_packages_menu
     from app.menus.store.redemables import show_redeemables_menu
@@ -108,7 +109,7 @@ def show_main_menu(profile):
         ("16", "Beli Paket Store (Hasil Scan)"),
         ("BA", "Balance Allotment"), ("R", "Register (Dukcapil)"),
         ("N", "Notifikasi"), ("V", "Validate MSISDN"),
-        ("00", "Bookmark Paket"), ("U", "Update Aplikasi"), ("99", "Tutup Aplikasi")
+        ("00", "Bookmark Paket"), ("F", "Firebase Login/Sync"), ("U", "Update Aplikasi (Git Pull)"), ("99", "Tutup Aplikasi")
     ]
 
     for code, label in menus:
@@ -201,6 +202,8 @@ def main():
                 print(json.dumps(res, indent=2)); pause()
             elif choice == "00":
                 show_bookmark_menu()
+            elif choice == "f":
+                show_firebase_menu()
             elif choice == "u":
                 try:
                     from app.service.git import auto_update

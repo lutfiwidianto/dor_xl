@@ -3,6 +3,8 @@ import json
 import uuid
 import requests
 
+from app.service.cache import cache_get, cache_set, make_cache_key
+
 from datetime import datetime, timezone
 
 from app.client.encrypt import (
@@ -16,6 +18,7 @@ BASE_API_URL = os.getenv("BASE_API_URL")
 if not BASE_API_URL:
     raise ValueError("BASE_API_URL environment variable not set")
 UA = os.getenv("UA")
+CACHE_TTL_SECONDS = 120
 
 def send_api_request(
     api_key: str,
@@ -108,6 +111,10 @@ def get_family(
     is_enterprise: bool | None = None,
     migration_type: str | None = None
 ) -> dict:
+    cache_key = make_cache_key('family', family_code, is_enterprise, migration_type)
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
     print("Fetching package family...")
     
     is_enterprise_list = [
@@ -172,6 +179,7 @@ def get_family(
         print(f"Failed to get valid family data for {family_code}")
         return None
 
+    cache_set(cache_key, family_data, ttl=CACHE_TTL_SECONDS)
     return family_data
 
 def get_families(api_key: str, tokens: dict, package_category_code: str) -> dict:
@@ -193,6 +201,8 @@ def get_families(api_key: str, tokens: dict, package_category_code: str) -> dict
         print(f"Res:{json.dumps(res, indent=2)}")
         input("Press Enter to continue...")
         return None
+    cache_set(cache_key, res["data"], ttl=CACHE_TTL_SECONDS)
+    cache_set(cache_key, res["data"], ttl=CACHE_TTL_SECONDS)
     return res["data"]
 
 def get_package(
@@ -220,6 +230,10 @@ def get_package(
         "package_variant_code": package_variant_code
     }
     
+    cache_key = make_cache_key('package', package_option_code, package_family_code, package_variant_code, lang)
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
     print("Fetching package...")
     res = send_api_request(api_key, path, raw_payload, tokens["id_token"], "POST")
     
@@ -239,6 +253,10 @@ def get_addons(api_key: str, tokens: dict, package_option_code: str) -> dict:
         "package_option_code": package_option_code
     }
     
+    cache_key = make_cache_key('addons', package_option_code)
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
     print("Fetching addons...")
     res = send_api_request(api_key, path, raw_payload, tokens["id_token"], "POST")
     

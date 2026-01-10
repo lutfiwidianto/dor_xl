@@ -2,7 +2,7 @@ import time
 from app.client.ciam import get_new_token
 from app.client.engsel import get_profile
 from app.util import ensure_api_key
-from app.service.local_db import LocalDB
+from app.service.firebase_store import FirebaseStore
 
 class Auth:
     _instance_ = None
@@ -43,7 +43,8 @@ class Auth:
     def __init__(self):
         if not self._initialized_:
             self.api_key = ensure_api_key()
-            self.store = LocalDB()
+            self.store = FirebaseStore()
+            self.store.migrate_legacy_tokens()
             
             self.load_tokens()
 
@@ -82,7 +83,7 @@ class Auth:
                 "refresh_token": refresh_token
             })
         
-        # Save to local DB
+        # Save to Firebase
         self.write_tokens_to_file()
 
         # Set active user to newly added
@@ -91,9 +92,8 @@ class Auth:
     def remove_refresh_token(self, number: int):
         self.refresh_tokens = [rt for rt in self.refresh_tokens if rt["number"] != number]
         
-        # Save to local DB
+        # Save to Firebase
         self.write_tokens_to_file()
-        self.store.delete_user(number)
         
         # If the removed user was the active user, select a new active user if available
         if self.active_user and self.active_user["number"] == number:
@@ -139,12 +139,6 @@ class Auth:
         # Update refresh token. The real client app do this, not sure why cz refresh token should still be valid
         rt_entry["refresh_token"] = tokens["refresh_token"]
         self.write_tokens_to_file()
-        self.store.update_tokens(
-            number,
-            refresh_token=tokens["refresh_token"],
-            access_token=tokens["access_token"],
-            id_token=tokens["id_token"],
-        )
         
         self.last_refresh_time = int(time.time())
         

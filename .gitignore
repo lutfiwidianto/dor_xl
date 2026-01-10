@@ -15,3 +15,10 @@ sentry/
 *.json
 active.number
 venv/
+# local firebase/cache
+app/data/
+app/.secrets/
+app/firebase.config.json
+app/*firebase-adminsdk*.json
+app/data/firebase_auth.json
+app/data/cache.json

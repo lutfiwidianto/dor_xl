@@ -1,8 +1,7 @@
 import time
 
 from app.service.auth import AuthInstance
-from app.service.firebase_sync import FirebaseSync
-from app.service.local_db import LocalDB
+from app.service.firebase_store import FirebaseStore
 
 
 def _mask_number(number: str) -> str:
@@ -62,19 +61,6 @@ def log_transaction(
     if error_message_override is not None:
         error_message = error_message_override
 
-    store = LocalDB()
-    local_id = store.log_transaction(
-        user_number=user_number,
-        package_code=package_code,
-        package_name=package_name,
-        method=method,
-        amount=amount,
-        status=status,
-        error_code=error_code,
-        error_message=error_message,
-        response_json=response,
-    )
-
     payload = {
         "timestamp": int(time.time()),
         "package_code": package_code,
@@ -86,8 +72,10 @@ def log_transaction(
         "error_message": error_message,
         "user_number_masked": _mask_number(user_number),
     }
-    ok, err = FirebaseSync.push_transaction(payload)
-    store.mark_synced(local_id, None if ok else err)
+    try:
+        FirebaseStore().push_transaction(payload)
+    except Exception:
+        return
 
 
 def log_simple_transaction(
